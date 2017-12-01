@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "musicplayer-d2fbc",
+    "staging": "musicplayer-d2fbc"
+  }
+}

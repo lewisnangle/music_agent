@@ -1,0 +1,29 @@
+{
+  "name": "music_agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "concert": "^2.1.0",
+    "firebase-admin": "^4.2.1",
+    "jquery": "^3.2.1",
+    "request": "^2.83.0",
+    "requestify": "^0.2.5",
+    "rest": "^2.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lewisnangle/music-agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lewisnangle/music-agent/issues"
+  },
+  "homepage": "https://github.com/lewisnangle/music-agent#readme"
+}
