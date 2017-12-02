@@ -20,6 +20,9 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 
 
+
+
+
 // Firebase Setup
 const admin = require('firebase-admin');
 const serviceAccount = require('./service-account.json');
@@ -42,6 +45,7 @@ const ALBUM_ACTION = 'play_album';
 const ARTIST_ACTION = 'play_artist';
 const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
 const FIND_ARTIST = 'find_artist';
+const USER_LOGIN_ACTION = 'input.welcome';
 
 // b. the parameters that are parsed from the make_name intent
 const SONG_ARGUMENT = 'song';
@@ -105,6 +109,15 @@ function findSkiddleArtist(artist){
 
 
 // c. The functions
+
+
+  function login (app) {
+
+
+
+
+
+  }
 
 //play song
   function playSong (app) {
@@ -216,6 +229,7 @@ function findSkiddleArtist(artist){
 
   // d. build an action map, which maps intent names to functions
   let actionMap = new Map();
+  actionMap.set(USER_LOGIN_ACTION,login);
   actionMap.set(ALBUM_ACTION, playAlbum);
   actionMap.set(SONG_ACTION, playSong);
   actionMap.set(ARTIST_ACTION,playArtist);
