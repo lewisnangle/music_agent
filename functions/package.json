@@ -1,6 +1,6 @@
 {
-  "name": "spotify-auth-functions",
-  "description": "Authenticate with Spotify Firebase Functions sample",
+  "name": "music_agents",
+  "description": "Conversational Agent with Dialogflow",
   "dependencies": {
     "actions-on-google": "^1.0.0",
     "cookie-parser": "^1.4.3",

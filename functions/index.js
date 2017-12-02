@@ -40,7 +40,6 @@ const App = require('actions-on-google').DialogflowApp;
 const SONG_ACTION = 'play_song';
 const ALBUM_ACTION = 'play_album';
 const ARTIST_ACTION = 'play_artist';
-const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
 const FIND_ARTIST = 'find_artist';
 
@@ -128,9 +127,6 @@ function findSkiddleArtist(artist){
       artist + ' ' + '! I hope you like it. See you next time.');
   }
 
-  function spotifyLogin (app) {
-    app.tell('loggin you into spotify....');
-  }
 
   function findBasicEvent (app) {
 
@@ -223,7 +219,6 @@ function findSkiddleArtist(artist){
   actionMap.set(ALBUM_ACTION, playAlbum);
   actionMap.set(SONG_ACTION, playSong);
   actionMap.set(ARTIST_ACTION,playArtist);
-  actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
   actionMap.set(FIND_BASIC_EVENTS_ACTION,findBasicEvent);
   actionMap.set(FIND_ARTIST,findArtist);
 
