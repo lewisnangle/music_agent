@@ -21,143 +21,57 @@ const crypto = require('crypto');
 
 
 
-// Firebase Setup
-const admin = require('firebase-admin');
-const serviceAccount = require('./service-account.json');
+
+
+
+
+
+//firebase stuff----------------------------------------------------------------------------------------------------
+
+
+
+
+
+var admin = require("firebase-admin");
+
+
+var serviceAccount = require("./service-account.json");
+
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: `https://${process.env.GCLOUD_PROJECT}.firebaseio.com`
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://musicplayer-d2fbc-761fa.firebaseio.com/"
 });
 
+var db = admin.database();
 
-// Spotify OAuth 2 setup
-// TODO: Configure the `spotify.client_id` and `spotify.client_secret` Google Cloud environment variables.
-const SpotifyWebApi = require('spotify-web-api-node');
-const Spotify = new SpotifyWebApi({
-    clientId: functions.config().spotify.client_id,
-    clientSecret: functions.config().spotify.client_secret,
-    redirectUri: `https://${process.env.GCLOUD_PROJECT}.firebaseapp.com/popup.html`
-});
+function writeUserData(name,musicGenres,artists) {
+    var userRef = db.ref('users/');
 
-// Scopes to request.
-const OAUTH_SCOPES = ['user-read-email'];
+    userRef.child(name).set({
+        username:name,
+        genres: musicGenres,
+        artists: artists
+    })
 
-/**
- * Redirects the User to the Spotify authentication consent screen. Also the 'state' cookie is set for later state
- * verification.
- */
-exports.redirect = functions.https.onRequest((req, res) => {
-    cookieParser()(req, res, () => {
-        const state = req.cookies.state || crypto.randomBytes(20).toString('hex');
-        console.log('Setting verification state:', state);
-        res.cookie('state', state.toString(), {maxAge: 3600000, secure: true, httpOnly: true});
-        const authorizeURL = Spotify.createAuthorizeURL(OAUTH_SCOPES, state.toString());
-        res.redirect(authorizeURL);
-    });
-});
+}
 
-/**
- * Exchanges a given Spotify auth code passed in the 'code' URL query parameter for a Firebase auth token.
- * The request also needs to specify a 'state' query parameter which will be checked against the 'state' cookie.
- * The Firebase custom auth token is sent back in a JSONP callback function with function name defined by the
- * 'callback' query parameter.
- */
-exports.token = functions.https.onRequest((req, res) => {
-    try {
-        cookieParser()(req, res, () => {
-            console.log('Received verification state:', req.cookies.state);
-            console.log('Received state:', req.query.state);
-            if (!req.cookies.state) {
-                throw new Error('State cookie not set or expired. Maybe you took too long to authorize. Please try again.');
-            } else if (req.cookies.state !== req.query.state) {
-                throw new Error('State validation failed');
-            }
-            console.log('Received auth code:', req.query.code);
-            Spotify.authorizationCodeGrant(req.query.code, (error, data) => {
-                if (error) {
-                    throw error;
-                }
-                console.log('Received Access Token:', data.body['access_token']);
-                Spotify.setAccessToken(data.body['access_token']);
-
-                Spotify.getMe((error, userResults) => {
-                    if (error) {
-                        throw error;
-                    }
-                    console.log('Auth code exchange result received:', userResults);
-                    // We have a Spotify access token and the user identity now.
-                    const accessToken = data.body['access_token'];
-                    const spotifyUserID = userResults.body['id'];
-                    var profilePic;
-                    if ( (userResults.body['images'][0]) == undefined){         //if there is no profile picture defined, give user generic one.
-                        profilePic = 'http://oi68.tinypic.com/255mgle.jpg';     //hosted default pic on tinypic.com
-                    } else {
-                        profilePic = userResults.body['images'][0]['url'];
-                    }
-                    const userName = userResults.body['display_name'];
-                    const email = userResults.body['email'];
-
-                    // Create a Firebase account and get the Custom Auth Token.
-                    createFirebaseAccount(spotifyUserID, userName, profilePic, email, accessToken).then(
-                        firebaseToken => {
-                            // Serve an HTML page that signs the user in and updates the user profile.
-                            res.jsonp({token: firebaseToken});
-                        });
-                });
-            });
-        });
-    } catch (error) {
-        return res.jsonp({error: error.toString});
-    }
-});
-
-/**
- * Creates a Firebase account with the given user profile and returns a custom auth token allowing
- * signing-in this account.
- * Also saves the accessToken to the datastore at /spotifyAccessToken/$uid
- *
- * @returns {Promise<string>} The Firebase custom auth token in a promise.
- */
-function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessToken) {
-    // The UID we'll assign to the user.
-    const uid = `spotify:${spotifyID}`;
-
-    // Save the access token to the Firebase Realtime Database.
-    const databaseTask = admin.database().ref(`/spotifyAccessToken/${uid}`)
-        .set(accessToken);
-
-    // Create or update the user account.
-    const userCreationTask = admin.auth().updateUser(uid, {
-        displayName: displayName,
-        photoURL: photoURL,
-        email: email,
-        emailVerified: true
-    }).catch(error => {
-        // If user does not exists we create it.
-        if (error.code === 'auth/user-not-found') {
-            return admin.auth().createUser({
-                uid: uid,
-                displayName: displayName,
-                photoURL: photoURL,
-                email: email,
-                emailVerified: true
-            });
+function checkExists (user) {
+    var userRef = db.ref('users/');
+    userRef.orderByChild("username").equalTo(user).once("value",snapshot => {
+        const userData = snapshot.val();
+        if (userData){
+            console.log("EXISTS ALREADY.");
+        } else {
+            console.log("DOESNT EXIST GO ON");
         }
-        throw error;
-    });
-
-    // Wait for all async tasks to complete, then generate and return a custom auth token.
-    return Promise.all([userCreationTask, databaseTask]).then(() => {
-        // Create a Firebase custom auth token.
-        return admin.auth().createCustomToken(uid).then((token) => {
-            console.log('Created Custom token for UID "', uid, '" Token:', token);
-            return token;
-        });
     });
 }
 
 
-//Dialogflow
+
+
+
+//Dialogflow----------------------------------------------------------------------------------------------------
 
 
 process.env.DEBUG = 'actions-on-google:*';
@@ -165,22 +79,22 @@ const App = require('actions-on-google').DialogflowApp;
 
 
 // a. the action name from the Dialogflow intent
-const SONG_ACTION = 'play_song';
-const ALBUM_ACTION = 'play_album';
-const ARTIST_ACTION = 'play_artist';
 const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
 const FIND_ARTIST = 'find_artist';
-const USER_LOGIN_ACTION = 'spotify_login';
+const WELCOME_FIRST_TIME_ACTION = 'Welcome.Welcome-no';
 
 // b. the parameters that are parsed from the make_name intent
-const SONG_ARGUMENT = 'song';
-const ALBUM_ARGUMENT = 'album';
 const ARTIST_ARGUMENT = 'music-artist';
 const CITY_ARGUMENT = 'geo-city';
+const USERNAME_ARGUMENT = 'users-name';
+const MUSIC_GENRES_ARGUMENT = 'music-genres';
+const MUSIC_ARTISTS_ARGUMENT = 'music-artists';
 
 
 exports.MusicPlayer = functions.https.onRequest((request, response) => {
 const app = new App({request, response});
+
+
 
 console.log('Request headers: ' + JSON.stringify(request.headers));
 console.log('Request body: ' + JSON.stringify(request.body));
@@ -236,30 +150,23 @@ function findSkiddleArtist(artist){
 // c. The functions
 
 
-  function spotifyLogin (app) {
-      app.tell('To log into your spotify account, please visit : https://musicplayer-d2fbc.firebaseapp.com and enter your details' );
+  function welcomeFirstTime (app) {
+      let name = app.getArgument(USERNAME_ARGUMENT);        //get name of user
+      let genres = app.getArgument(MUSIC_GENRES_ARGUMENT);           //get music genres user likes
+      let artists = app.getArgument(MUSIC_ARTISTS_ARGUMENT);
+
+      checkExists(name);
+
+
+
+
+
+      writeUserData(name,genres,artists);
+
+      app.tell('You wont be forgotten ' + name + ". \xa0" + "The genres you like are : " + genres + " The artists you like are: " + artists );
+
   }
 
-//play song
-  function playSong (app) {
-    let song = app.getArgument(SONG_ARGUMENT);
-    app.tell('Alright, playing ' +
-      song + ' ' + '! I hope you like it. See you next time.');
-  }
-
-//play album
-  function playAlbum (app) {
-    let album = app.getArgument(ALBUM_ARGUMENT);
-    app.tell('Alright, playing ' +
-      album + ' ' + '! I hope you like it. See you next time.');
-  }
-
-//play artist
-  function playArtist (app) {
-    let artist = app.getArgument(ARTIST_ARGUMENT);
-    app.tell('Alright, playing ' +
-      artist + ' ' + '! I hope you like it. See you next time.');
-  }
 
 
   function findBasicEvent (app) {
@@ -350,10 +257,7 @@ function findSkiddleArtist(artist){
 
   // d. build an action map, which maps intent names to functions
   let actionMap = new Map();
-  actionMap.set(USER_LOGIN_ACTION,spotifyLogin);
-  actionMap.set(ALBUM_ACTION, playAlbum);
-  actionMap.set(SONG_ACTION, playSong);
-  actionMap.set(ARTIST_ACTION,playArtist);
+  actionMap.set(WELCOME_FIRST_TIME_ACTION,welcomeFirstTime);
   actionMap.set(FIND_BASIC_EVENTS_ACTION,findBasicEvent);
   actionMap.set(FIND_ARTIST,findArtist);
 
