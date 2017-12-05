@@ -42,7 +42,14 @@ admin.initializeApp({
     databaseURL: "https://musicplayer-d2fbc-761fa.firebaseio.com/"
 });
 
+
+
+
 var db = admin.database();
+
+
+
+
 
 function writeUserData(name,musicGenres,artists) {
     var userRef = db.ref('users/');
@@ -54,6 +61,9 @@ function writeUserData(name,musicGenres,artists) {
     })
 
 }
+
+
+
 
 function checkExists (user) {
     var userRef = db.ref('users/');
@@ -156,8 +166,6 @@ function findSkiddleArtist(artist){
       let artists = app.getArgument(MUSIC_ARTISTS_ARGUMENT);
 
       checkExists(name);
-
-
 
 
 
