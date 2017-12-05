@@ -21,30 +21,13 @@ const crypto = require('crypto');
 
 
 
-//firebase stuff----------------------------------------------------------------------------------------------------
-
-
-var admin = require("firebase-admin");
-
-
-var serviceAccount = require("./service-account.json");
-
+// Firebase Setup
+const admin = require('firebase-admin');
+const serviceAccount = require('./service-account.json');
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://musicplayer-d2fbc-761fa.firebaseio.com/"
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: `https://${process.env.GCLOUD_PROJECT}.firebaseio.com`
 });
-
-var db = admin.database();
-
-
-
-//spotify-firebase----------------------------------------------------------------------------------------------------
-
-var spotifyApp = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: `https://${process.env.GCLOUD_PROJECT}.firebaseio.com`
-},"spotifyApp");
-
 
 
 // Spotify OAuth 2 setup
@@ -174,40 +157,7 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
 }
 
 
-
-
-
-function writeUserData(name,musicGenres,artists) {
-    var userRef = db.ref('users/');
-
-    userRef.child(name).set({
-        username:name,
-        genres: musicGenres,
-        artists: artists
-    })
-
-}
-
-
-
-
-function checkExists (user) {
-    var userRef = db.ref('users/');
-    userRef.orderByChild("username").equalTo(user).once("value",snapshot => {
-        const userData = snapshot.val();
-        if (userData){
-            console.log("EXISTS ALREADY.");
-        } else {
-            console.log("DOESNT EXIST GO ON");
-        }
-    });
-}
-
-
-
-
-
-//Dialogflow----------------------------------------------------------------------------------------------------
+//Dialogflow
 
 
 process.env.DEBUG = 'actions-on-google:*';
@@ -215,22 +165,22 @@ const App = require('actions-on-google').DialogflowApp;
 
 
 // a. the action name from the Dialogflow intent
+const SONG_ACTION = 'play_song';
+const ALBUM_ACTION = 'play_album';
+const ARTIST_ACTION = 'play_artist';
 const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
 const FIND_ARTIST = 'find_artist';
-const WELCOME_FIRST_TIME_ACTION = 'Welcome.Welcome-no';
+const USER_LOGIN_ACTION = 'spotify_login';
 
 // b. the parameters that are parsed from the make_name intent
+const SONG_ARGUMENT = 'song';
+const ALBUM_ARGUMENT = 'album';
 const ARTIST_ARGUMENT = 'music-artist';
 const CITY_ARGUMENT = 'geo-city';
-const USERNAME_ARGUMENT = 'users-name';
-const MUSIC_GENRES_ARGUMENT = 'music-genres';
-const MUSIC_ARTISTS_ARGUMENT = 'music-artists';
 
 
 exports.MusicPlayer = functions.https.onRequest((request, response) => {
 const app = new App({request, response});
-
-
 
 console.log('Request headers: ' + JSON.stringify(request.headers));
 console.log('Request body: ' + JSON.stringify(request.body));
@@ -286,21 +236,30 @@ function findSkiddleArtist(artist){
 // c. The functions
 
 
-  function welcomeFirstTime (app) {
-      let name = app.getArgument(USERNAME_ARGUMENT);        //get name of user
-      let genres = app.getArgument(MUSIC_GENRES_ARGUMENT);           //get music genres user likes
-      let artists = app.getArgument(MUSIC_ARTISTS_ARGUMENT);
-
-      checkExists(name);
-
-
-
-      writeUserData(name,genres,artists);
-
-      app.tell('You wont be forgotten ' + name + ". \xa0" + "The genres you like are : " + genres + " The artists you like are: " + artists );
-
+  function spotifyLogin (app) {
+      app.tell('To log into your spotify account, please visit : https://musicplayer-d2fbc.firebaseapp.com and enter your details' );
   }
 
+//play song
+  function playSong (app) {
+    let song = app.getArgument(SONG_ARGUMENT);
+    app.tell('Alright, playing ' +
+      song + ' ' + '! I hope you like it. See you next time.');
+  }
+
+//play album
+  function playAlbum (app) {
+    let album = app.getArgument(ALBUM_ARGUMENT);
+    app.tell('Alright, playing ' +
+      album + ' ' + '! I hope you like it. See you next time.');
+  }
+
+//play artist
+  function playArtist (app) {
+    let artist = app.getArgument(ARTIST_ARGUMENT);
+    app.tell('Alright, playing ' +
+      artist + ' ' + '! I hope you like it. See you next time.');
+  }
 
 
   function findBasicEvent (app) {
@@ -391,7 +350,10 @@ function findSkiddleArtist(artist){
 
   // d. build an action map, which maps intent names to functions
   let actionMap = new Map();
-  actionMap.set(WELCOME_FIRST_TIME_ACTION,welcomeFirstTime);
+  actionMap.set(USER_LOGIN_ACTION,spotifyLogin);
+  actionMap.set(ALBUM_ACTION, playAlbum);
+  actionMap.set(SONG_ACTION, playSong);
+  actionMap.set(ARTIST_ACTION,playArtist);
   actionMap.set(FIND_BASIC_EVENTS_ACTION,findBasicEvent);
   actionMap.set(FIND_ARTIST,findArtist);
 
