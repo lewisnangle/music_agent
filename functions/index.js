@@ -47,6 +47,7 @@ var spotifyApp = admin.initializeApp({
 
 
 
+
 // Spotify OAuth 2 setup
 // TODO: Configure the `spotify.client_id` and `spotify.client_secret` Google Cloud environment variables.
 const SpotifyWebApi = require('spotify-web-api-node');
