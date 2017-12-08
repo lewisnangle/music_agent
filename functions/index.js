@@ -194,15 +194,6 @@ function writeUserData(name,musicGenres,artists) {
 
 
 
-
-
-
-
-
-
-
-
-
 //Dialogflow----------------------------------------------------------------------------------------------------
 
 
@@ -214,7 +205,9 @@ const App = require('actions-on-google').DialogflowApp;
 const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
 const FIND_ARTIST = 'find_artist';
 const WELCOME_PICK_USERNAME = 'Welcome.Welcome-no';
-const SPOTIFY_LOGGED_IN = 'spotify_logged_in';
+const SPOTIFY_LOGIN_ACTION = 'spotify_login';
+const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
+const SPOTIFY_ACCESS_ACTION = 'spotify_access';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -222,6 +215,7 @@ const CITY_ARGUMENT = 'geo-city';
 const USERNAME_ARGUMENT = 'users-name';
 const MUSIC_GENRES_ARGUMENT = 'music-genres';
 const MUSIC_ARTISTS_ARGUMENT = 'music-artists';
+const SPOTIFY_USERNAME = 'spotify_username';
 
 
 exports.MusicPlayer = functions.https.onRequest((request, response) => {
@@ -287,11 +281,47 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 // c. The functions
 
 
+    function spotifyAccess (app) {
+        let token = app.getArgument('accesstoken');
 
+
+        app.tell("The access token to be worked with in this intent is as follows: " + token);
+    }
 
     function spotifyLoggedIn (app) {
-        app.tell("You have logged into spotify");
+        let username = app.getArgument(SPOTIFY_USERNAME);
+
+        var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);
+
+        spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
+            const accessToken = snapshot.val();
+            if (accessToken){
+
+                let responseJson = {};
+
+
+                responseJson.speech = 'What now?';
+                responseJson.displayText = 'What now?';
+                var contextStr = '[{"name":"spotify_access", "lifespan":5, "parameters":{"accesstoken": "'+ accessToken + '"}}]';
+                var contextObj = JSON.parse(contextStr);
+                responseJson.contextOut = contextObj;
+                console.log('Response:'+JSON.stringify(responseJson));
+                response.json(responseJson);
+
+
+            } else {
+                app.tell("Are you sure you have signed in?");
+            }
+        });
+
     }
+
+
+    function spotifyLogin(app){
+        app.tell("Could you please open https://musicplayer-d2fbc.firebaseapp.com in your browser"
+        + " and sign into spotify. Then tell dialogflow that you have logged in.");
+    }
+
 
     function welcomePickUsername (app) {
         let nameUserWants = app.getArgument(USERNAME_ARGUMENT);        //get name of user
@@ -410,7 +440,9 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
-    actionMap.set(SPOTIFY_LOGGED_IN,spotifyLoggedIn);
+    actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
+    actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
+    actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
     actionMap.set(WELCOME_PICK_USERNAME,welcomePickUsername);
     actionMap.set(FIND_BASIC_EVENTS_ACTION,findBasicEvent);
     actionMap.set(FIND_ARTIST,findArtist);
