@@ -56,7 +56,7 @@ const Spotify = new SpotifyWebApi({
 });
 
 // Scopes to request.
-const OAUTH_SCOPES = ['user-read-email'];
+const OAUTH_SCOPES = ['user-read-email','user-follow-read','user-top-read'];
 
 /**
  * Redirects the User to the Spotify authentication consent screen. Also the 'state' cookie is set for later state
@@ -179,7 +179,7 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
 
 
 
-
+//write user data.
 function writeUserData(name,musicGenres,artists) {
     var userRef = db.ref('users/');
 
@@ -191,6 +191,15 @@ function writeUserData(name,musicGenres,artists) {
 
 }
 
+//write spotify user data.
+function writeSpotifyUserData(spotifyUsername,artists) {
+    var userRef = db.ref('spotifyUsers/');
+
+    userRef.child(spotifyUsername).set({
+        artists: artists
+    })
+
+}
 
 
 
@@ -225,10 +234,10 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     console.log('Request headers: ' + JSON.stringify(request.headers));
     console.log('Request body: ' + JSON.stringify(request.body));
 
-    var sessionID = request.body.sessionId;          //get the sessionId of the request.
+ //   var sessionID = request.body.sessionId;          //get the sessionId of the request.
 
 
-    console.log("Session ID in dialogflow... : " + sessionID);
+ //   console.log("Session ID in dialogflow... : " + sessionID);
 
 //------------------------------------------------------------Events and geocoding------------------------------
     var NodeGeocoder = require('node-geocoder');            //require node-geocoder for converting location names into coordinates
@@ -275,6 +284,8 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     }
 
 
+
+
 //--------------------------------------------------------------------------------------------------------------------------
 
 
@@ -285,28 +296,74 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
         let token = app.getArgument('accesstoken');
 
 
-        app.tell("The access token to be worked with in this intent is as follows: " + token);
+        Spotify.setAccessToken(token);
+
+        //Get the authenticated user.
+        Spotify.getMe()
+            .then(function(userData) {
+                console.log('Some information about the authenticated user', userData.body);
+
+                var username = userData.body.id;
+                username = 'spotify:'+username;             //to keep spotify usernames consistent throughout app.
+
+                //Get the artist the user follows.
+                Spotify.getFollowedArtists({limit : 50})
+                    .then(function(data) {
+                        let artists = data.body.artists.items;
+                        let numberOfArtists = data.body.artists.total;
+
+                        let artistList = [];
+
+
+                        //iterate through the artists the user follows and add them to artistList
+                        for (let i = 0; i < numberOfArtists; i++){
+                            try{
+                                artistList.push(artists[i].name);
+                            } catch (err) {
+                                console.log("Error occurred: " + err);
+                            }
+                        }
+
+
+                        //write the username and artists the user follows to database.
+                        writeSpotifyUserData(username,artistList);
+
+                        app.tell("The artists you follow are :" + artistList);
+
+                    }, function(err) {
+                        console.log('Something went wrong!', err);
+                    });
+
+
+            }, function(err) {
+                console.log('Something went wrong!', err);
+            });
+
+
+
+
+
+
     }
 
     function spotifyLoggedIn (app) {
-        let username = app.getArgument(SPOTIFY_USERNAME);
+        let username = app.getArgument(SPOTIFY_USERNAME);       //get spotify username of current user
 
-        var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);
+        var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
 
         spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
             const accessToken = snapshot.val();
             if (accessToken){
 
-                let responseJson = {};
+                let responseJson = {};      //custom JSON response
 
-
-                responseJson.speech = 'What now?';
-                responseJson.displayText = 'What now?';
-                var contextStr = '[{"name":"spotify_access", "lifespan":5, "parameters":{"accesstoken": "'+ accessToken + '"}}]';
-                var contextObj = JSON.parse(contextStr);
-                responseJson.contextOut = contextObj;
+                responseJson.speech = 'Great! You are connected, now what would you like me to do?';    //speech output of response
+                responseJson.displayText = 'Great! you are connected, now what would you like me to do?';   //text output of response
+                var contextStr = '[{"name":"spotify_access", "lifespan":5, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
+                var contextObj = JSON.parse(contextStr);    //put string in JSON object.
+                responseJson.contextOut = contextObj;       //put context object in JSON response
                 console.log('Response:'+JSON.stringify(responseJson));
-                response.json(responseJson);
+                response.json(responseJson);        //send JSON response.
 
 
             } else {
