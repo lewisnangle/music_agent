@@ -56,7 +56,7 @@ const Spotify = new SpotifyWebApi({
 });
 
 // Scopes to request.
-const OAUTH_SCOPES = ['user-read-email','user-follow-read','user-top-read'];
+const OAUTH_SCOPES = ['user-read-email','user-follow-read','user-top-read','playlist-read-private'];
 
 /**
  * Redirects the User to the Spotify authentication consent screen. Also the 'state' cookie is set for later state
@@ -201,6 +201,18 @@ function writeSpotifyUserData(spotifyUsername,artists) {
 
 }
 
+//takes two concatenated arrays and returns an array without any duplicates.
+function arrayUnique(array) {
+    var a = array.concat();
+    for(var i=0; i<a.length; ++i) {
+        for(var j=i+1; j<a.length; ++j) {
+            if(a[i] === a[j])
+                a.splice(j--, 1);
+        }
+    }
+
+    return a;
+}
 
 
 //Dialogflow----------------------------------------------------------------------------------------------------
@@ -283,6 +295,21 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
         return rp('https://www.skiddle.com/api/v1/events/search/?api_key=' +  skiddleKey + '&keyword=' + artist)
     }
 
+//get a users top artists
+    function userTopArtists (token){
+        var options = {
+            uri: 'https://api.spotify.com/v1/me/top/artists?limit=50',
+            headers: {
+                'User-Agent': 'Request-Promise',
+                'Authorization': 'Bearer ' + token
+            },
+            json: true // Automatically parses the JSON string in the response
+        };
+
+        return rp(options)
+
+    }
+
 
 
 
@@ -324,11 +351,42 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
                             }
                         }
 
+                        //get spotify top users
+                        userTopArtists(token).then(function(res){
+                            console.log(res);
 
-                        //write the username and artists the user follows to database.
-                        writeSpotifyUserData(username,artistList);
+                            let numTopArtists = res.total;
+                            let artistObjects = res.items;
 
-                        app.tell("The artists you follow are :" + artistList);
+                            let topArtistList = [];
+
+                            for (let i = 0; i < numTopArtists; i ++){
+                                try {
+                                    topArtistList.push(artistObjects[i].name);
+                                } catch (err) {
+                                    console.log("Error occurred: " + err);
+                                }
+                            }
+
+                            //combine users top artists and followed artists
+
+                            var artistsCombined = arrayUnique(artistList.concat(topArtistList));
+
+                            console.log("You artists Combined are : "+ artistsCombined);
+
+                            console.log("Your top artists are : " + topArtistList);
+
+
+                            //write the username and artists the user likes to database.
+                            writeSpotifyUserData(username,artistsCombined);
+
+
+                            app.tell("The artists you like are :" + artistsCombined);
+
+
+                        }).catch(function(err){
+                            console.log(err);
+                        })
 
                     }, function(err) {
                         console.log('Something went wrong!', err);
