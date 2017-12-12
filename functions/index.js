@@ -229,6 +229,8 @@ const WELCOME_PICK_USERNAME = 'Welcome.Welcome-no';
 const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
+const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
+const FIND_ARTIST_EVENT_BANDSINTOWN = 'find_artist_event_bandsintown';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -237,6 +239,7 @@ const USERNAME_ARGUMENT = 'users-name';
 const MUSIC_GENRES_ARGUMENT = 'music-genres';
 const MUSIC_ARTISTS_ARGUMENT = 'music-artists';
 const SPOTIFY_USERNAME = 'spotify_username';
+const ARTIST = 'artist';
 
 
 exports.MusicPlayer = functions.https.onRequest((request, response) => {
@@ -305,13 +308,21 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
             },
             json: true // Automatically parses the JSON string in the response
         };
-
         return rp(options)
-
     }
 
+//get bandsintown events for an artist
+    function getEventsForArtistWithinNextYear (artistString) {
+        var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
+        var dateNow = new Date().toJSON().substring(0,10);      //get date now and convert into correct format for Bandsintown API
+        var yearFromNow = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toJSON().substring(0,10);  //get date a year from now and convert into correct format for Bandsintown API
+
+        //console.log("The date now is : "+dateNow);
+        //console.log("The date a year from now... is : "+ yearFromNow);
 
 
+        return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=anything&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
+    }
 
 //--------------------------------------------------------------------------------------------------------------------------
 
@@ -319,6 +330,46 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 // c. The functions
 
 
+    function findArtistEventBandsintown (app) {
+        let artist = app.getArgument(ARTIST);
+
+        getEventsForArtistWithinNextYear(artist).then(function(res){
+
+            var data = res;
+
+            console.log("event Data.......... : " + data);
+
+            app.tell("finding you events for the artist: "+ artist);
+
+        }).catch(function(err){
+            console.log("Error Occurred! " + err);
+        })
+
+
+
+    }
+
+
+
+    function spotifySongRecommendation (app) {
+
+        //"Can you recommend me something i can dance to?"
+        //"Can you recommend me something fast?"
+
+
+        //Create a function which has parameters the same as the Tuneable Track attributes in the Spotify Web API.
+        //Then make a request for a recommendation to the Spotify Web API with those attributes as headers.
+
+        //Javascipt functions with optional parameters?
+
+
+
+    }
+
+
+
+
+    //function to populate database with information from the user's spotify
     function spotifyAccess (app) {
         let token = app.getArgument('accesstoken');
 
@@ -385,16 +436,16 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
 
                         }).catch(function(err){
-                            console.log(err);
+                            console.log("Something went wrong went wrong when finding top artists! " + err);
                         })
 
                     }, function(err) {
-                        console.log('Something went wrong!', err);
+                        console.log('Something went wrong when getting followed artists!', err);
                     });
 
 
             }, function(err) {
-                console.log('Something went wrong!', err);
+                console.log('Something went wrong when getting user!', err);
             });
 
 
@@ -555,6 +606,8 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN,findArtistEventBandsintown);
+    actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
     actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
