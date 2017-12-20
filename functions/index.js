@@ -215,6 +215,11 @@ function arrayUnique(array) {
 }
 
 
+
+
+
+
+
 //Dialogflow----------------------------------------------------------------------------------------------------
 
 
@@ -230,7 +235,7 @@ const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
 const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
-const FIND_ARTIST_EVENT_BANDSINTOWN = 'find_artist_event_bandsintown';
+const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_inNextYear';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -258,8 +263,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     var NodeGeocoder = require('node-geocoder');            //require node-geocoder for converting location names into coordinates
     var request = require('request');             //require the request module for calling the Skiddle API.
     var skiddleKey = '7b8ab215e66d06e23c5f8b6a691de015';
-    var geoCodeKey = 'AIzaSyDHtzdPWL_4k-NFqrzV3LPA0DS1kxravII'
-
+    var geoCodeKey = 'AIzaSyDHtzdPWL_4k-NFqrzV3LPA0DS1kxravII';
 
 
 
@@ -321,8 +325,14 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
         //console.log("The date a year from now... is : "+ yearFromNow);
 
 
-        return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=anything&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
+        return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
     }
+
+    //function to get flickr request
+    function flickrRequest (keyword){
+        return rp('https://api.flickr.com/services/feeds/photos_public.gne?tags=' + keyword +'&format=json');
+    }
+
 
 //--------------------------------------------------------------------------------------------------------------------------
 
@@ -330,16 +340,129 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 // c. The functions
 
 
-    function findArtistEventBandsintown (app) {
+    function findArtistEventBandsintownInNextYear (app) {
         let artist = app.getArgument(ARTIST);
 
+        //get events from artist name in next year with bandsintown API
         getEventsForArtistWithinNextYear(artist).then(function(res){
 
-            var data = res;
 
-            console.log("event Data.......... : " + data);
+            var events = JSON.parse(res);
+            var numOfEvents = events.length;
 
-            app.tell("finding you events for the artist: "+ artist);
+            console.log("event Data.......... : " + events);
+
+            console.log("Number of events? : "+ numOfEvents );
+
+
+            var eventsList = [];
+
+
+            var carouselList = [];
+
+
+
+            //if just one event, we need to present basic card to user. Otherwise present them with carousel list.
+            if (numOfEvents == 1){
+
+                let event = events[0];
+
+                //flickr request to get photo of venue
+                flickrRequest(event.venue.name).then(function(res){
+                    //manipulate the Flickr API response so that it is in JSON form
+                    var data = res.substring(15);
+                    data = data.slice(0,-1);
+                    data = JSON.parse(data);
+
+
+                    var imageUrl;   //get image url of picture of venue
+
+                    if (data.items[0] == undefined){
+                        imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
+                    } else {
+                        imageUrl = data.items[0].media.m;
+                    }
+
+
+                    http://oi68.tinypic.com/255mgle.jpg
+
+
+
+                    app.ask(app.buildRichResponse()
+                        // Create a basic card and add it to the rich response
+                            .addSimpleResponse('There is just one place ' + artist + ' is playing:')
+                            .addBasicCard(app.buildBasicCard(artist,event.venue.name)
+                                .setTitle(event.venue.name)
+                                .setImage(imageUrl, 'Image alternate text')
+                                .setImageDisplay('CROPPED')
+                            )
+                    );
+                }).catch(function(err){
+                    console.log("Error Occurred with Flickr: " + err);
+                })
+
+            //more than one event, so we can present the user with a carousel list
+            } else if (numOfEvents >= 2) {
+
+                for (let i = 0; i < numOfEvents; i++){
+                    let event = events[i];
+
+                    //flickr request to get photo of venue
+                    flickrRequest(event.venue.name).then(function(res){
+                        //manipulate the Flickr API response so that it is in JSON form
+                        var data = res.substring(15);
+                        data = data.slice(0,-1);
+                        data = JSON.parse(data);
+
+                        console.log(data);
+
+                        var imageUrl;   //get image url of picture of venue
+
+                        if (data.items[0] == undefined){
+                            imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
+                        } else {
+                            imageUrl = data.items[0].media.m;
+                        }
+
+
+                        console.log(imageUrl);
+
+                        carouselList.push(app.buildOptionItem(event.venue.name,event.venue.city)
+                            .setTitle(event.venue.name)
+                            .setDescription(event.description)
+                            .setImage(imageUrl, 'Artist Events'))
+
+
+
+                        console.log("Carousel List : " + carouselList);
+
+                        console.log("Carousel list size : " + carouselList.length + ".. and numOfEvents: " + numOfEvents );
+
+                        if (carouselList.length == numOfEvents){
+                            app.askWithCarousel('Alright, here are some places ' + artist + ' is playing:',
+                                // Build a carousel
+                                app.buildCarousel()
+                                // Add the first item to the carousel
+                                    .addItems(carouselList)
+                            );
+                        }
+
+
+                    }).catch(function(err){
+                        console.log("Error occurred with Flickr :"+ err);
+                    });
+            }
+
+
+
+
+            } else if (numOfEvents == 0){
+                app.tell("I'm sorry, I wasn't able to find any events in the next year for " + artist);
+            }
+
+        //    console.log(eventsList);
+
+         //   app.tell(eventsList);
 
         }).catch(function(err){
             console.log("Error Occurred! " + err);
@@ -606,7 +729,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
-    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN,findArtistEventBandsintown);
+    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,findArtistEventBandsintownInNextYear);
     actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
