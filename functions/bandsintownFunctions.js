@@ -5,7 +5,11 @@ var rp = require('request-promise');
 
 exports.findArtistEventUserLikes = function (app) {
 
-    app.tell("Finding some events from artists you like!");
+    let token = app.getArgument('accesstoken');
+
+
+    app.tell("token");
+
 
 };
 

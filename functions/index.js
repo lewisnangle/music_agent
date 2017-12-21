@@ -387,7 +387,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
                 responseJson.speech = 'Great! You are connected, now what would you like me to do?';    //speech output of response
                 responseJson.displayText = 'Great! you are connected, now what would you like me to do?';   //text output of response
-                var contextStr = '[{"name":"spotify_access", "lifespan":5, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
+                var contextStr = '[{"name":"spotify_access", "lifespan":10, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
                 var contextObj = JSON.parse(contextStr);    //put string in JSON object.
                 responseJson.contextOut = contextObj;       //put context object in JSON response
                 console.log('Response:'+JSON.stringify(responseJson));
