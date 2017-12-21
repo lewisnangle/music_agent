@@ -216,10 +216,6 @@ function arrayUnique(array) {
 
 
 
-
-
-
-
 //Dialogflow----------------------------------------------------------------------------------------------------
 
 
@@ -236,6 +232,7 @@ const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
 const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
 const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_inNextYear';
+const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -254,53 +251,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     console.log('Request headers: ' + JSON.stringify(request.headers));
     console.log('Request body: ' + JSON.stringify(request.body));
 
- //   var sessionID = request.body.sessionId;          //get the sessionId of the request.
 
-
- //   console.log("Session ID in dialogflow... : " + sessionID);
-
-//------------------------------------------------------------Events and geocoding------------------------------
-    var NodeGeocoder = require('node-geocoder');            //require node-geocoder for converting location names into coordinates
-    var request = require('request');             //require the request module for calling the Skiddle API.
-    var skiddleKey = '7b8ab215e66d06e23c5f8b6a691de015';
-    var geoCodeKey = 'AIzaSyDHtzdPWL_4k-NFqrzV3LPA0DS1kxravII';
-
-
-
-    var optionsGeo = {
-        provider: 'google',
-        httpAdapter: 'https', // Default
-        apiKey: geoCodeKey, // for Mapquest, OpenCage, Google Premier
-        formatter: null         // 'gpx', 'string', ...
-    };
-
-    var geocoder = NodeGeocoder(optionsGeo);
-    var rp = require('request-promise');
-
-
-
-//Get the geo data from the city name
-    function getGeoData(city){
-        return new Promise(function(resolve,reject){
-            geocoder.geocode(city, function(err,res) {
-                if(res) //If no result, then error
-                    resolve(res)
-                else
-                    reject(err)
-            });
-        })
-
-    };
-
-//get skiddle events from coordinates
-    function getBasicSkiddleEvents(latitude,longitude){
-        return rp('https://www.skiddle.com/api/v1/events/search/?api_key=' + skiddleKey + '&latitude=' + latitude + '&longitude=' + longitude + '&radius=5&eventcode=LIVE&order=distance&description=1')
-    }
-
-//get skiddle events from artist name
-    function findSkiddleArtist(artist){
-        return rp('https://www.skiddle.com/api/v1/events/search/?api_key=' +  skiddleKey + '&keyword=' + artist)
-    }
 
 //get a users top artists
     function userTopArtists (token){
@@ -315,162 +266,14 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
         return rp(options)
     }
 
-//get bandsintown events for an artist
-    function getEventsForArtistWithinNextYear (artistString) {
-        var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
-        var dateNow = new Date().toJSON().substring(0,10);      //get date now and convert into correct format for Bandsintown API
-        var yearFromNow = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toJSON().substring(0,10);  //get date a year from now and convert into correct format for Bandsintown API
-
-        //console.log("The date now is : "+dateNow);
-        //console.log("The date a year from now... is : "+ yearFromNow);
-
-
-        return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
-    }
-
-    //function to get flickr request
-    function flickrRequest (keyword){
-        return rp('https://api.flickr.com/services/feeds/photos_public.gne?tags=' + keyword +'&format=json');
-    }
-
-
 //--------------------------------------------------------------------------------------------------------------------------
 
 
 // c. The functions
 
 
-    function findArtistEventBandsintownInNextYear (app) {
-        let artist = app.getArgument(ARTIST);
-
-        //get events from artist name in next year with bandsintown API
-        getEventsForArtistWithinNextYear(artist).then(function(res){
-
-
-            var events = JSON.parse(res);
-            var numOfEvents = events.length;
-
-            console.log("event Data.......... : " + events);
-
-            console.log("Number of events? : "+ numOfEvents );
-
-
-            var eventsList = [];
-
-
-            var carouselList = [];
-
-
-
-            //if just one event, we need to present basic card to user. Otherwise present them with carousel list.
-            if (numOfEvents == 1){
-
-                let event = events[0];
-
-                //flickr request to get photo of venue
-                flickrRequest(event.venue.name).then(function(res){
-                    //manipulate the Flickr API response so that it is in JSON form
-                    var data = res.substring(15);
-                    data = data.slice(0,-1);
-                    data = JSON.parse(data);
-
-
-                    var imageUrl;   //get image url of picture of venue
-
-                    if (data.items[0] == undefined){
-                        imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
-                    } else {
-                        imageUrl = data.items[0].media.m;
-                    }
-
-
-                    http://oi68.tinypic.com/255mgle.jpg
-
-
-
-                    app.ask(app.buildRichResponse()
-                        // Create a basic card and add it to the rich response
-                            .addSimpleResponse('There is just one place ' + artist + ' is playing:')
-                            .addBasicCard(app.buildBasicCard(artist,event.venue.name)
-                                .setTitle(event.venue.name)
-                                .setImage(imageUrl, 'Image alternate text')
-                                .setImageDisplay('CROPPED')
-                            )
-                    );
-                }).catch(function(err){
-                    console.log("Error Occurred with Flickr: " + err);
-                })
-
-            //more than one event, so we can present the user with a carousel list
-            } else if (numOfEvents >= 2) {
-
-                for (let i = 0; i < numOfEvents; i++){
-                    let event = events[i];
-
-                    //flickr request to get photo of venue
-                    flickrRequest(event.venue.name).then(function(res){
-                        //manipulate the Flickr API response so that it is in JSON form
-                        var data = res.substring(15);
-                        data = data.slice(0,-1);
-                        data = JSON.parse(data);
-
-                        console.log(data);
-
-                        var imageUrl;   //get image url of picture of venue
-
-                        if (data.items[0] == undefined){
-                            imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
-                        } else {
-                            imageUrl = data.items[0].media.m;
-                        }
-
-
-                        console.log(imageUrl);
-
-                        carouselList.push(app.buildOptionItem(event.venue.name,event.venue.city)
-                            .setTitle(event.venue.name)
-                            .setDescription(event.description)
-                            .setImage(imageUrl, 'Artist Events'))
-
-
-
-                        console.log("Carousel List : " + carouselList);
-
-                        console.log("Carousel list size : " + carouselList.length + ".. and numOfEvents: " + numOfEvents );
-
-                        if (carouselList.length == numOfEvents){
-                            app.askWithCarousel('Alright, here are some places ' + artist + ' is playing:',
-                                // Build a carousel
-                                app.buildCarousel()
-                                // Add the first item to the carousel
-                                    .addItems(carouselList)
-                            );
-                        }
-
-
-                    }).catch(function(err){
-                        console.log("Error occurred with Flickr :"+ err);
-                    });
-            }
-
-
-
-
-            } else if (numOfEvents == 0){
-                app.tell("I'm sorry, I wasn't able to find any events in the next year for " + artist);
-            }
-
-        //    console.log(eventsList);
-
-         //   app.tell(eventsList);
-
-        }).catch(function(err){
-            console.log("Error Occurred! " + err);
-        })
-
-
-
-    }
+    const bandsintownFunctions = require('./bandsintownFunctions');
+    const skiddleFunctions = require('./skiddleFunctions');
 
 
 
@@ -488,8 +291,6 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
 
     }
-
-
 
 
     //function to populate database with information from the user's spotify
@@ -571,11 +372,6 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
                 console.log('Something went wrong when getting user!', err);
             });
 
-
-
-
-
-
     }
 
     function spotifyLoggedIn (app) {
@@ -631,112 +427,22 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
             }
         });
 
-
-
-
-
         //    app.tell('You wont be forgotten ' + name + ". \xa0" + "The genres you like are : " + genres + " The artists you like are: " + artists );
 
     }
 
 
-
-    function findBasicEvent (app) {
-
-        let city = app.getArgument(CITY_ARGUMENT);          //get specified city argument from dialogFlow
-
-        getGeoData(city).then(function(r){                  //get the geodata from the specified city using Google API
-            var data = r;
-
-            JSON.stringify(data);
-
-            //get latitude and longitude from geodata
-            var latitude = data[0]['latitude'];
-            var longitude = data[0]['longitude'];
-
-
-            getBasicSkiddleEvents(latitude,longitude).then(function (res) {     //use latitude and longitude with skiddle API to return an events object
-                var data = res;
-
-                var results = JSON.parse(data).results;                    //get results of events object
-                var pageCount = JSON.parse(data).pagecount;                //get page count
-
-                var eventList = [];                                         //list to hold event names
-
-                for(let i = 0; i<pageCount;i++){
-                    eventList.push(results[i]['eventname']);                //put events in list
-                }
-
-                var outputString = eventList.join(',  ');                    //turn events into string to be outputted through Dialogflow
-
-                app.tell("Here is a list of events happening in " + city + ": " + outputString); //provide response to user
-
-            }).catch(function (err) {
-                console.log("Error Occurred :" + err);          //catch errors from SkiddleEvents function
-            });
-
-        }).catch(function(err){
-                console.log('error occurred: ' + err)               //catch errors from geodata function
-            }
-        )
-    }
-
-    function findArtist (app){
-        let artist = app.getArgument(ARTIST_ARGUMENT);
-
-
-        findSkiddleArtist(artist).then(function(res){
-            var data = res;
-
-
-            var results = JSON.parse(data).results;
-            var pageCount = JSON.parse(data).pagecount;
-
-
-            var eventDict = {};             //dictionary of events, where key is the venue name and value is the act/name of the event
-
-            for(let i = 0; i<pageCount;i++) {
-                eventDict[results[i]['venue']['name']] = results[i]['eventname'];      //fill dictionary with venue and event names
-            }
-
-
-            var eventList = []                  //list to hold venues and events names as list
-
-
-            for (var key in eventDict) {
-                if (eventDict.hasOwnProperty(key)) {
-                    eventList.push( [key, eventDict[key]]);         //put each list of venue and event name in to list
-                }
-            }
-
-            var eventFormattedList = [];            //list to hold formatting
-
-
-            for (var i = 0; i <eventList.length; i++){
-                eventFormattedList.push(eventList[i].join(', is Hosting: '));      //format each list to say "venue, is Hosting: event"
-            }
-
-            var outputString = eventFormattedList.join(", \xa0");               //format string to be outputted
-
-            app.tell(outputString);                             //provide response to user
-
-
-        }).catch(function(e){
-            console.log("Error Occurred: "+e);
-        })
-
-    }
-
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
-    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,findArtistEventBandsintownInNextYear);
+    actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);
+    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,bandsintownFunctions.findArtistEventBandsintownInNextYear);
     actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
     actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
     actionMap.set(WELCOME_PICK_USERNAME,welcomePickUsername);
-    actionMap.set(FIND_BASIC_EVENTS_ACTION,findBasicEvent);
-    actionMap.set(FIND_ARTIST,findArtist);
+    actionMap.set(FIND_BASIC_EVENTS_ACTION,skiddleFunctions.findBasicEvent);
+    actionMap.set(FIND_ARTIST,skiddleFunctions.findArtist);
 
 
     app.handleRequest(actionMap);
