@@ -1,14 +1,104 @@
 const ARTIST = 'artist';
 
 var rp = require('request-promise');
+const functions = require('firebase-functions');
+
+var funcs = require('./functions.js');
+
+
+const SpotifyWebApi = require('spotify-web-api-node');
+const Spotify = new SpotifyWebApi({
+    clientId: functions.config().spotify.client_id,
+    clientSecret: functions.config().spotify.client_secret,
+    redirectUri: `https://${process.env.GCLOUD_PROJECT}.firebaseapp.com/popup.html`
+});
+
+
+//get a users top artists
+function userTopArtists (token){
+    var options = {
+        uri: 'https://api.spotify.com/v1/me/top/artists?limit=50',
+        headers: {
+            'User-Agent': 'Request-Promise',
+            'Authorization': 'Bearer ' + token
+        },
+        json: true // Automatically parses the JSON string in the response
+    };
+    return rp(options)
+}
 
 
 exports.findArtistEventUserLikes = function (app) {
 
     let token = app.getArgument('accesstoken');
 
+    Spotify.setAccessToken(token);
 
-    app.tell("token");
+
+    //Get the authenticated user.
+    Spotify.getMe()
+        .then(function(userData) {
+            console.log('Some information about the authenticated user', userData.body);
+
+            var username = userData.body.id;
+            username = 'spotify:'+username;             //to keep spotify usernames consistent throughout app.
+
+            //Get the artist the user follows.
+            Spotify.getFollowedArtists({limit : 50})
+                .then(function(data) {
+                    let artists = data.body.artists.items;
+                    let numberOfArtists = data.body.artists.total;
+
+                    let artistList = [];
+
+
+                    //iterate through the artists the user follows and add them to artistList
+                    for (let i = 0; i < numberOfArtists; i++){
+                        try{
+                            artistList.push(artists[i].name);
+                        } catch (err) {
+                            console.log("Error occurred: " + err);
+                        }
+                    }
+
+                    //get spotify top users
+                    userTopArtists(token).then(function(res){
+                        console.log(res);
+
+                        let numTopArtists = res.total;
+                        let artistObjects = res.items;
+
+                        let topArtistList = [];
+
+                        for (let i = 0; i < numTopArtists; i ++){
+                            try {
+                                topArtistList.push(artistObjects[i].name);
+                            } catch (err) {
+                                console.log("Error occurred: " + err);
+                            }
+                        }
+
+                        //combine users top artists and followed artists
+
+                        var artistsCombined = funcs.arrayUnique(artistList.concat(topArtistList));
+
+
+
+                        app.tell("The artists you like are :" + artistsCombined);
+
+
+                    }).catch(function(err){
+                        console.log("Something went wrong went wrong when finding top artists! " + err);
+                    })
+
+                }, function(err) {
+                    console.log('Something went wrong when getting followed artists!', err);
+                });
+
+
+        }, function(err) {
+            console.log('Something went wrong when getting user!', err);
+        });
 
 
 };

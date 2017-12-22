@@ -20,6 +20,9 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 
 
+const funcs = require('./functions.js');            //generic functions
+
+
 
 //firebase stuff----------------------------------------------------------------------------------------------------
 
@@ -47,7 +50,6 @@ var spotifyApp = admin.initializeApp({
 
 
 // Spotify OAuth 2 setup
-// TODO: Configure the `spotify.client_id` and `spotify.client_secret` Google Cloud environment variables.
 const SpotifyWebApi = require('spotify-web-api-node');
 const Spotify = new SpotifyWebApi({
     clientId: functions.config().spotify.client_id,
@@ -177,6 +179,7 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
 }
 
 
+var rp = require('request-promise');
 
 
 //write user data.
@@ -199,19 +202,6 @@ function writeSpotifyUserData(spotifyUsername,artists) {
         artists: artists
     })
 
-}
-
-//takes two concatenated arrays and returns an array without any duplicates.
-function arrayUnique(array) {
-    var a = array.concat();
-    for(var i=0; i<a.length; ++i) {
-        for(var j=i+1; j<a.length; ++j) {
-            if(a[i] === a[j])
-                a.splice(j--, 1);
-        }
-    }
-
-    return a;
 }
 
 
@@ -345,7 +335,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
                             //combine users top artists and followed artists
 
-                            var artistsCombined = arrayUnique(artistList.concat(topArtistList));
+                            var artistsCombined = funcs.arrayUnique(artistList.concat(topArtistList));
 
                             console.log("You artists Combined are : "+ artistsCombined);
 
