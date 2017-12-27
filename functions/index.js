@@ -216,7 +216,6 @@ const App = require('actions-on-google').DialogflowApp;
 // a. the action name from the Dialogflow intent
 const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
 const FIND_ARTIST = 'find_artist';
-const WELCOME_PICK_USERNAME = 'Welcome.Welcome-no';
 const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
@@ -398,28 +397,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     }
 
 
-    function welcomePickUsername (app) {
-        let nameUserWants = app.getArgument(USERNAME_ARGUMENT);        //get name of user
 
-        let genres = 'rap';
-        let artists = 'acdc';
-
-
-
-        var userRef = db.ref('users/');
-        userRef.orderByChild("username").equalTo(nameUserWants).once("value",snapshot => {     //check if username already exists
-            const userData = snapshot.val();
-            if (userData){
-                app.tell(nameUserWants + " already exists, can you pick another one.");
-            } else {
-                writeUserData(nameUserWants,genres,artists);
-                app.tell(nameUserWants + ", I have remembered your music taste.");
-            }
-        });
-
-        //    app.tell('You wont be forgotten ' + name + ". \xa0" + "The genres you like are : " + genres + " The artists you like are: " + artists );
-
-    }
 
 
     // d. build an action map, which maps intent names to functions
@@ -430,7 +408,6 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
     actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
-    actionMap.set(WELCOME_PICK_USERNAME,welcomePickUsername);
     actionMap.set(FIND_BASIC_EVENTS_ACTION,skiddleFunctions.findBasicEvent);
     actionMap.set(FIND_ARTIST,skiddleFunctions.findArtist);
 

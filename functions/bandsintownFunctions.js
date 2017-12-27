@@ -28,7 +28,22 @@ function userTopArtists (token){
 }
 
 
+//get bandsintown events for an artist
+function getEventsForArtistWithinNextYear (artistString) {
+    var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
+    var dateNow = new Date().toJSON().substring(0,10);      //get date now and convert into correct format for Bandsintown API
+    var yearFromNow = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toJSON().substring(0,10);  //get date a year from now and convert into correct format for Bandsintown API
+
+    //console.log("The date now is : "+dateNow);
+    //console.log("The date a year from now... is : "+ yearFromNow);
+
+
+    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
+}
+
+
 exports.findArtistEventUserLikes = function (app) {
+
 
     let token = app.getArgument('accesstoken');
 
@@ -81,10 +96,43 @@ exports.findArtistEventUserLikes = function (app) {
                         //combine users top artists and followed artists
 
                         var artistsCombined = funcs.arrayUnique(artistList.concat(topArtistList));
+                        let numArtists = artistsCombined.length;
 
+
+
+                        console.log("Artists Combined : "+ artistsCombined);
+                        console.log("number Of artists : " + numArtists);
+
+                        console.log("BEFORE ");
+
+
+                        for (let i = 0; i < numArtists; i++) {
+
+                            getEventsForArtistWithinNextYear(artistsCombined[i]).then(function(res){
+
+                                var events = JSON.parse(res);
+                                var numOfEvents = events.length;
+
+                                console.log("finding events for : " + artistsCombined[i] );
+
+                                console.log("event Data.......... : " + events);
+
+                                console.log("Number of events? : "+ numOfEvents );
+
+                            }).catch(function(err){
+                                console.log(err);
+                            })
+
+                        }
+                        console.log("AFTER ");
 
 
                         app.tell("The artists you like are :" + artistsCombined);
+
+
+
+
+
 
 
                     }).catch(function(err){
@@ -103,18 +151,6 @@ exports.findArtistEventUserLikes = function (app) {
 
 };
 
-//get bandsintown events for an artist
-function getEventsForArtistWithinNextYear (artistString) {
-    var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
-    var dateNow = new Date().toJSON().substring(0,10);      //get date now and convert into correct format for Bandsintown API
-    var yearFromNow = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toJSON().substring(0,10);  //get date a year from now and convert into correct format for Bandsintown API
-
-    //console.log("The date now is : "+dateNow);
-    //console.log("The date a year from now... is : "+ yearFromNow);
-
-
-    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
-}
 
 //function to get flickr request
 function flickrRequest (keyword){
