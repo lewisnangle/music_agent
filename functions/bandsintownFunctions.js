@@ -6,6 +6,14 @@ const functions = require('firebase-functions');
 var funcs = require('./functions.js');
 
 
+//firebase stuff----------------------------------------------------------------------------------------------------
+
+
+var admin = require("firebase-admin");
+
+var db = admin.database();
+
+
 const SpotifyWebApi = require('spotify-web-api-node');
 const Spotify = new SpotifyWebApi({
     clientId: functions.config().spotify.client_id,
@@ -44,8 +52,9 @@ function getEventsForArtistWithinNextYear (artistString) {
 
 exports.findArtistEventUserLikes = function (app) {
 
-
+    //get access token of signed in user
     let token = app.getArgument('accesstoken');
+    let targetCity = app.getArgument('geo-city');
 
     Spotify.setAccessToken(token);
 
@@ -56,92 +65,90 @@ exports.findArtistEventUserLikes = function (app) {
             console.log('Some information about the authenticated user', userData.body);
 
             var username = userData.body.id;
-            username = 'spotify:'+username;             //to keep spotify usernames consistent throughout app.
-
-            //Get the artist the user follows.
-            Spotify.getFollowedArtists({limit : 50})
-                .then(function(data) {
-                    let artists = data.body.artists.items;
-                    let numberOfArtists = data.body.artists.total;
-
-                    let artistList = [];
+            username = 'spotify:'+username;
 
 
-                    //iterate through the artists the user follows and add them to artistList
-                    for (let i = 0; i < numberOfArtists; i++){
-                        try{
-                            artistList.push(artists[i].name);
-                        } catch (err) {
-                            console.log("Error occurred: " + err);
-                        }
-                    }
+            //get database reference to the artists the user likes
+            var userRef = db.ref('spotifyUsers/'+username +'/artists');
 
-                    //get spotify top users
-                    userTopArtists(token).then(function(res){
-                        console.log(res);
+            var artists = []
 
-                        let numTopArtists = res.total;
-                        let artistObjects = res.items;
+            userRef.on('value',function(snapshot){      //get the artists the users likes from database
+                var artists = snapshot.val();
 
-                        let topArtistList = [];
 
-                        for (let i = 0; i < numTopArtists; i ++){
-                            try {
-                                topArtistList.push(artistObjects[i].name);
-                            } catch (err) {
-                                console.log("Error occurred: " + err);
+                console.log(artists.length);
+
+                let count = 0;
+
+                var eventArtistDict = {};       //dictionary to hold artists as key and the artists respective events as values
+
+
+                for (let i = 0; i < artists.length; i++){
+
+                    let artist = artists[i];
+
+                    console.log(artist);
+
+                    //get events for each artist the user likes
+                    getEventsForArtistWithinNextYear(artist).then(function(res){
+                        var events = JSON.parse(res);
+                        var numOfEvents = events.length;
+
+                        console.log("event Data.......... : " + events);
+
+                        console.log("Number of events? : "+ numOfEvents );
+
+                        eventArtistDict[artist] = events;           //put each artists and their events in dictionary
+
+                        count++;
+
+                        if (count == artists.length){           //we have got events for each artist from bandsintown
+
+                            console.log(eventArtistDict);
+
+                            var targetCityEvents = [];          //list to hold events for that are in the relevant city
+
+                            for (var key in eventArtistDict) {
+
+                                if (eventArtistDict[key].length !== 0){     //if there are any events
+
+                                    for (let i = 0; i < eventArtistDict[key].length; i++){
+                                        if (eventArtistDict[key][i].venue.city == targetCity){  //if the city the potential event is in is the same as the target city
+                                            targetCityEvents.push(eventArtistDict[key][i]);     //we have found an event the user will be interested in in the relevant city
+                                        }
+                                    }
+                                }
+
                             }
-                        }
 
-                        //combine users top artists and followed artists
+                            var eventsToPresentToUser = [];
 
-                        var artistsCombined = funcs.arrayUnique(artistList.concat(topArtistList));
-                        let numArtists = artistsCombined.length;
+                            if (targetCityEvents.length > 0){
 
-
-
-                        console.log("Artists Combined : "+ artistsCombined);
-                        console.log("number Of artists : " + numArtists);
-
-                        console.log("BEFORE ");
-
-
-                        for (let i = 0; i < numArtists; i++) {
-
-                            getEventsForArtistWithinNextYear(artistsCombined[i]).then(function(res){
-
-                                var events = JSON.parse(res);
-                                var numOfEvents = events.length;
-
-                                console.log("finding events for : " + artistsCombined[i] );
-
-                                console.log("event Data.......... : " + events);
-
-                                console.log("Number of events? : "+ numOfEvents );
-
-                            }).catch(function(err){
-                                console.log(err);
-                            })
+                                for (let i = 0; i <targetCityEvents.length; i++){
+                                    eventsToPresentToUser.push(targetCityEvents[i].venue.name);
+                                }
+                                app.tell("Here are some events in "+targetCity + ": " + eventsToPresentToUser);
+                            } else {
+                                app.tell("Looks like there arent any events coming up you'd be interested in in " + targetCity);
+                            }
 
                         }
-                        console.log("AFTER ");
-
-
-                        app.tell("The artists you like are :" + artistsCombined);
-
-
-
-
-
-
 
                     }).catch(function(err){
-                        console.log("Something went wrong went wrong when finding top artists! " + err);
+                        console.log(err);
                     })
 
-                }, function(err) {
-                    console.log('Something went wrong when getting followed artists!', err);
-                });
+
+                }
+
+
+
+            })
+
+
+
 
 
         }, function(err) {
