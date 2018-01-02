@@ -36,6 +36,107 @@ function userTopArtists (token){
 }
 
 
+function presentAsCarousel(eventsToPresent,app,target){
+
+    var carouselList = [];
+
+    var events = eventsToPresent;
+    var numOfEvents = eventsToPresent.length;
+
+
+    //if just one event, we need to present basic card to user. Otherwise present them with carousel list.
+    if (numOfEvents == 1){
+
+        let event = events[0];
+
+        //flickr request to get photo of venue
+        flickrRequest(event.venue.name).then(function(res){
+            //manipulate the Flickr API response so that it is in JSON form
+            var data = res.substring(15);
+            data = data.slice(0,-1);
+            data = JSON.parse(data);
+
+
+            var imageUrl;   //get image url of picture of venue
+
+            if (data.items[0] == undefined){
+                imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
+            } else {
+                imageUrl = data.items[0].media.m;
+            }
+
+
+            app.ask(app.buildRichResponse()
+                // Create a basic card and add it to the rich response
+                    .addSimpleResponse('There is just one place ' + target + ' is playing:')
+                    .addBasicCard(app.buildBasicCard(target,event.venue.name)
+                        .setTitle(event.venue.name)
+                        .setImage(imageUrl, 'Image alternate text')
+                        .setImageDisplay('CROPPED')
+                    )
+            );
+        }).catch(function(err){
+            console.log("Error Occurred with Flickr: " + err);
+        })
+
+        //more than one event, so we can present the user with a carousel list
+    } else if (numOfEvents >= 2) {
+
+        for (let i = 0; i < numOfEvents; i++){
+            let event = events[i];
+
+            //flickr request to get photo of venue
+            flickrRequest(event.venue.name).then(function(res){
+                //manipulate the Flickr API response so that it is in JSON form
+                var data = res.substring(15);
+                data = data.slice(0,-1);
+                data = JSON.parse(data);
+
+                console.log(data);
+
+                var imageUrl;   //get image url of picture of venue
+
+                if (data.items[0] == undefined){
+                    imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
+                } else {
+                    imageUrl = data.items[0].media.m;
+                }
+
+
+                console.log(imageUrl);
+
+                carouselList.push(app.buildOptionItem(event.venue.name,event.venue.city)
+                    .setTitle(event.venue.name)
+                    .setDescription(event.description)
+                    .setImage(imageUrl, 'Artist Events'))
+
+
+
+                console.log("Carousel List : " + carouselList);
+
+                console.log("Carousel list size : " + carouselList.length + ".. and numOfEvents: " + numOfEvents );
+
+                //once we have created a carousel list containing all events, we present it to the user.
+                if (carouselList.length == numOfEvents){
+                    app.askWithCarousel('Alright, here are some places ' + target + ' is playing:',
+                        // Build a carousel
+                        app.buildCarousel()
+                        // Add the first item to the carousel
+                            .addItems(carouselList)
+                    );
+                }
+
+
+            }).catch(function(err){
+                console.log("Error occurred with Flickr :"+ err);
+            });
+        }
+    } else if (numOfEvents == 0){
+        app.tell("I'm sorry, I wasn't able to find any events in the next year for " + target);
+    }
+}
+
+
 //get bandsintown events for an artist
 function getEventsForArtistWithinNextYear (artistString) {
     var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
@@ -127,9 +228,47 @@ exports.findArtistEventUserLikes = function (app) {
                             if (targetCityEvents.length > 0){
 
                                 for (let i = 0; i <targetCityEvents.length; i++){
-                                    eventsToPresentToUser.push(targetCityEvents[i].venue.name);
+                                    eventsToPresentToUser.push(targetCityEvents[i]);
                                 }
-                                app.tell("Here are some events in "+targetCity + ": " + eventsToPresentToUser);
+                              //  app.tell("Here are some events in "+targetCity + ": " + eventsToPresentToUser);
+
+
+
+                                presentAsCarousel(targetCityEvents,app,targetCity);
+
+                                /**
+                                app.askWithList('Alright! Here are a few things you can learn. Which sounds interesting?',
+                                    // Build a list
+                                    app.buildList('Things to learn about')
+                                    // Add the first item to the list
+                                        .addItems(app.buildOptionItem('MATH_AND_PRIME',
+                                            ['math', 'math and prime', 'prime numbers', 'prime'])
+                                            .setTitle('Math & prime numbers')
+                                            .setDescription('42 is an abundant number because the sum of its ' +
+                                                'proper divisors 54 is greater…')
+                                            .setImage('http://example.com/math_and_prime.jpg', 'Math & prime numbers'))
+                                        // Add the second item to the list
+                                        .addItems(app.buildOptionItem('EGYPT',
+                                            ['religion', 'egpyt', 'ancient egyptian'])
+                                            .setTitle('Ancient Egyptian religion')
+                                            .setDescription('42 gods who ruled on the fate of the dead in the ' +
+                                                'afterworld. Throughout the under…')
+                                            .setImage('http://example.com/egypt', 'Egypt')
+                                        )
+                                        // Add third item to the list
+                                        .addItems(app.buildOptionItem('RECIPES',
+                                            ['recipes', 'recipe', '42 recipes'])
+                                            .setTitle('42 recipes with 42 ingredients')
+                                            .setDescription('Here\'s a beautifully simple recipe that\'s full ' +
+                                                'of flavor! All you need is some ginger and…')
+                                            .setImage('http://example.com/recipe', 'Recipe')
+                                        )
+                                );
+
+
+                                **/
+
+
                             } else {
                                 app.tell("Looks like there arent any events coming up you'd be interested in in " + targetCity);
                             }
@@ -139,17 +278,8 @@ exports.findArtistEventUserLikes = function (app) {
                     }).catch(function(err){
                         console.log(err);
                     })
-
-
                 }
-
-
-
             })
-
-
-
-
 
         }, function(err) {
             console.log('Something went wrong when getting user!', err);
@@ -179,104 +309,7 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
 
         console.log("Number of events? : "+ numOfEvents );
 
-
-        var eventsList = [];
-
-
-        var carouselList = [];
-
-
-
-        //if just one event, we need to present basic card to user. Otherwise present them with carousel list.
-        if (numOfEvents == 1){
-
-            let event = events[0];
-
-            //flickr request to get photo of venue
-            flickrRequest(event.venue.name).then(function(res){
-                //manipulate the Flickr API response so that it is in JSON form
-                var data = res.substring(15);
-                data = data.slice(0,-1);
-                data = JSON.parse(data);
-
-
-                var imageUrl;   //get image url of picture of venue
-
-                if (data.items[0] == undefined){
-                    imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
-                } else {
-                    imageUrl = data.items[0].media.m;
-                }
-
-
-                app.ask(app.buildRichResponse()
-                    // Create a basic card and add it to the rich response
-                        .addSimpleResponse('There is just one place ' + artist + ' is playing:')
-                        .addBasicCard(app.buildBasicCard(artist,event.venue.name)
-                            .setTitle(event.venue.name)
-                            .setImage(imageUrl, 'Image alternate text')
-                            .setImageDisplay('CROPPED')
-                        )
-                );
-            }).catch(function(err){
-                console.log("Error Occurred with Flickr: " + err);
-            })
-
-            //more than one event, so we can present the user with a carousel list
-        } else if (numOfEvents >= 2) {
-
-            for (let i = 0; i < numOfEvents; i++){
-                let event = events[i];
-
-                //flickr request to get photo of venue
-                flickrRequest(event.venue.name).then(function(res){
-                    //manipulate the Flickr API response so that it is in JSON form
-                    var data = res.substring(15);
-                    data = data.slice(0,-1);
-                    data = JSON.parse(data);
-
-                    console.log(data);
-
-                    var imageUrl;   //get image url of picture of venue
-
-                    if (data.items[0] == undefined){
-                        imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
-                    } else {
-                        imageUrl = data.items[0].media.m;
-                    }
-
-
-                    console.log(imageUrl);
-
-                    carouselList.push(app.buildOptionItem(event.venue.name,event.venue.city)
-                        .setTitle(event.venue.name)
-                        .setDescription(event.description)
-                        .setImage(imageUrl, 'Artist Events'))
-
-
-
-                    console.log("Carousel List : " + carouselList);
-
-                    console.log("Carousel list size : " + carouselList.length + ".. and numOfEvents: " + numOfEvents );
-
-                    //once we have created a carousel list containing all events, we present it to the user.
-                    if (carouselList.length == numOfEvents){
-                        app.askWithCarousel('Alright, here are some places ' + artist + ' is playing:',
-                            // Build a carousel
-                            app.buildCarousel()
-                            // Add the first item to the carousel
-                                .addItems(carouselList)
-                        );
-                    }
-
-
-                }).catch(function(err){
-                    console.log("Error occurred with Flickr :"+ err);
-                });
-            }
-        } else if (numOfEvents == 0){
-            app.tell("I'm sorry, I wasn't able to find any events in the next year for " + artist);
-        }
+        presentAsCarousel(events,app,artist);
 
         //    console.log(eventsList);
 
