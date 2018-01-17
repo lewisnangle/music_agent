@@ -222,6 +222,7 @@ const SPOTIFY_ACCESS_ACTION = 'spotify_access';
 const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
 const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_inNextYear';
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
+const SONG_INFO = 'song_info';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -255,6 +256,11 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
         return rp(options)
     }
 
+
+    function songInfoFromLastFM(artist,song){
+        return rp('http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=bd830d3d033985eb65bca44e084ecf27&artist='+artist+'&track='+song+'&format=json');
+    }
+
 //--------------------------------------------------------------------------------------------------------------------------
 
 
@@ -263,6 +269,29 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
     const bandsintownFunctions = require('./bandsintownFunctions');
     const skiddleFunctions = require('./skiddleFunctions');
+
+
+    function songInfo (app) {
+        let artist = app.getArgument('artist');
+        let song = app.getArgument('song');
+
+        songInfoFromLastFM(artist,song).then(function(res){
+
+
+            let songData = JSON.parse(res);
+
+            let songInfo = songData.track.wiki.summary;
+
+            songInfo = songInfo.substring(0, songInfo.indexOf('<')); //remove irrelevant information
+
+            app.tell(songInfo);
+
+        }).catch(function(err){
+            console.log('Error occurred getting song info from Last FM: ' + err);
+        })
+
+
+    }
 
 
 
@@ -402,6 +431,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);
     actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,bandsintownFunctions.findArtistEventBandsintownInNextYear);
     actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);

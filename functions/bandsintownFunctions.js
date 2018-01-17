@@ -36,6 +36,54 @@ function userTopArtists (token){
 }
 
 
+
+function getGoogleHomeOutput(events,cityOrArtist){
+    var eventDict = {};             //dictionary of events, where key is the venue name and value is the act/name of the event
+    var numOfEvents = events.length;
+
+    if (cityOrArtist == 'artist'){
+        for(let i = 0; i<numOfEvents;i++) {
+            eventDict[events[i]['venue']['name']] = events[i]['venue']['city'];      //fill dictionary with venue and event names
+        }
+    }
+
+    if (cityOrArtist == 'city'){
+        for(let i = 0; i<numOfEvents;i++) {
+            eventDict[events[i]['lineup']] = events[i]['venue']['name'];      //fill dictionary with venue and event names
+        }
+    }
+
+
+
+
+    var eventList = []                  //list to hold venues and events names as list
+
+
+    for (var key in eventDict) {
+        if (eventDict.hasOwnProperty(key)) {
+            eventList.push( [key, eventDict[key]]);         //put each list of venue and event name in to list
+        }
+    }
+
+    console.log("THE EVENT LIST " + eventList)
+
+    var eventFormattedList = [];            //list to hold formatting
+
+
+    for (var i = 0; i <eventList.length; i++){
+        eventFormattedList.push(eventList[i].join(', in '));      //format each list to say "venue, is Hosting: event"
+    }
+
+    var outputString = eventFormattedList.join(", \xa0");               //format string to be outputted
+
+    console.log("THE OUTPUT STRING IS  " +  outputString)
+
+    return outputString;
+
+
+}
+
+
 function presentAsCarousel(eventsToPresent,app,target){
 
     var carouselList = [];
@@ -314,24 +362,25 @@ exports.findArtistEventUserLikes = function (app) {
 
                             }
 
-                            var eventsToPresentToUser = [];
+                            console.log("TARGET CITY EVENTS  " + targetCityEvents);
+
+
 
                             if (targetCityEvents.length > 0){
 
-                                for (let i = 0; i <targetCityEvents.length; i++){
-                                    eventsToPresentToUser.push(targetCityEvents[i]);
-                                }
 
                                 let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT); //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
 
                                 if (hasScreen){
                                     if (numOfEvents >= 8){
-                                        presentAsList(events,app,targetCity);
+                                        presentAsList(targetCityEvents,app,targetCity);
                                     } else {
-                                        presentAsCarousel(events,app,targetCity);
+                                        presentAsCarousel(targetCityEvents,app,targetCity);
                                     }
                                 } else {
-                                    app.tell("Need to add auditory display implementation for Google Home");
+
+                                    app.tell("Here are some events you might like " + username + " " + getGoogleHomeOutput(targetCityEvents,'city'));           //function to get google home formatted response
+
                                 }
 
                             } else {
@@ -365,10 +414,11 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
 
     //get events from artist name in next year with bandsintown API
     getEventsForArtistWithinNextYear(artist).then(function(res){
-
+        console.log(res);
 
         var events = JSON.parse(res);
         var numOfEvents = events.length;
+
 
         console.log("event Data.......... : " + events);
 
@@ -383,7 +433,9 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
                 presentAsCarousel(events,app,artist);
             }
         } else {
-            app.tell("Need to add auditory display implementation for Google Home");
+
+            app.tell(artist + "is playing at " + getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
+
         }
 
     }).catch(function(err){
