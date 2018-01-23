@@ -22,6 +22,34 @@ const crypto = require('crypto');
 
 const funcs = require('./functions.js');            //generic functions
 
+var nodemailer = require('nodemailer'); //nodemailer for sending emails
+
+
+//function for sending email
+function sendEmail(email,uid){
+    var transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: 'a.music.agent.app@gmail.com',
+            pass: ''
+        }
+    });
+
+    var mailOptions = {
+        from: 'a.music.agent.app@gmail.com',
+        to: email,
+        subject: 'Music Agent Login',
+        text: 'Here is your spotify login code provided by the music agent: ' + uid + " :)",
+    };
+    transporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+            console.log(error);
+        } else {
+            console.log('Email sent: ' + info.response);
+        }
+    });
+}
+
 
 
 //firebase stuff----------------------------------------------------------------------------------------------------
@@ -157,6 +185,9 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
     }).catch(error => {
         // If user does not exists we create it.
         if (error.code === 'auth/user-not-found') {
+
+          //  sendEmail(email,uid); //send confirmation email to user
+
             return admin.auth().createUser({
                 uid: uid,
                 displayName: displayName,
