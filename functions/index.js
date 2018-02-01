@@ -62,7 +62,7 @@ var serviceAccount = require("./service-account.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://musicplayer-d2fbc-761fa.firebaseio.com/"
+    databaseURL: "https://eventagent-401c3.firebaseio.com/"
 });
 
 var db = admin.database();
@@ -131,11 +131,10 @@ exports.token = functions.https.onRequest((req, res) => {
                         throw error;
                     }
                     console.log('Auth code exchange result received:', userResults);
+
                     // We have a Spotify access token and the user identity now.
                     const accessToken = data.body['access_token'];
                     const spotifyUserID = userResults.body['id'];
-
-                    var code = spotifyUserID + Math.floor(Math.random() * 100); //random code to give to user to get spotify access
 
 
                     var profilePic;
@@ -172,9 +171,20 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
     // The UID we'll assign to the user.
     const uid = `spotify:${spotifyID}`;
 
+    //var uniqueCode = uid + Math.floor(Math.random() * 100);
+
+    admin.auth().getUser(uid)
+        .then(function(userRecord) {
+            console.log("Successfully fetched user data:", userRecord.toJSON());
+        })
+        .catch(function(error) {
+            console.log("Error fetching user data:", error);
+        });
+
     // Save the access token to the Firebase Realtime Database.
     const databaseTask = admin.database().ref(`/spotifyAccessToken/${uid}`)
         .set(accessToken);
+
 
     // Create or update the user account.
     const userCreationTask = admin.auth().updateUser(uid, {
@@ -265,7 +275,7 @@ const SPOTIFY_USERNAME = 'spotify_username';
 const ARTIST = 'artist';
 
 
-exports.MusicPlayer = functions.https.onRequest((request, response) => {
+exports.EventAgent = functions.https.onRequest((request, response) => {
     const app = new App({request, response});
 
 
@@ -296,6 +306,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+
 
 
     const bandsintownFunctions = require('./bandsintownFunctions');
@@ -344,10 +355,15 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
     //function to populate database with information from the user's spotify
     function spotifyAccess (app) {
+        Spotify.resetAccessToken();
         let token = app.getArgument('accesstoken');
+
+        console.log("ACCESS TOKEN INSIDE SPOTIFY ACCESS : " + token);
 
 
         Spotify.setAccessToken(token);
+
+        console.log('The access token is ' + Spotify.getAccessToken());
 
         //Get the authenticated user.
         Spotify.getMe()
@@ -424,19 +440,27 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
     }
 
     function spotifyLoggedIn (app) {
-        let username = app.getArgument(SPOTIFY_USERNAME);       //get spotify username of current user
+
+
+        let username = "spotify:" + app.getArgument(SPOTIFY_USERNAME);       //get spotify username of current user
+
+        console.log("Username argument: " + username);
 
         var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
 
         spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
-            const accessToken = snapshot.val();
+            var accessToken = snapshot.val();
             if (accessToken){
 
                 let responseJson = {};      //custom JSON response
 
+                console.log("ACCESS TOKEN INSIDE SPOTIFY ACCESS : " + accessToken);
+
+                console.log(username); //??????????????????????
+
                 responseJson.speech = 'Great! You are connected, now what would you like me to do?';    //speech output of response
                 responseJson.displayText = 'Great! you are connected, now what would you like me to do?';   //text output of response
-                var contextStr = '[{"name":"spotify_access", "lifespan":10, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
+                var contextStr = '[{"name":"spotify_access", "lifespan":4, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
                 var contextObj = JSON.parse(contextStr);    //put string in JSON object.
                 responseJson.contextOut = contextObj;       //put context object in JSON response
                 console.log('Response:'+JSON.stringify(responseJson));
@@ -452,7 +476,7 @@ exports.MusicPlayer = functions.https.onRequest((request, response) => {
 
 
     function spotifyLogin(app){
-        app.tell("Could you please open https://musicplayer-d2fbc.firebaseapp.com in your browser"
+        app.tell("Could you please open https://eventagent-401c3.firebaseapp.com in your browser"
         + " and sign into spotify. Then tell dialogflow that you have logged in.");
     }
 

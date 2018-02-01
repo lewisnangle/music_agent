@@ -84,7 +84,7 @@ function getGoogleHomeOutput(events,cityOrArtist){
 }
 
 
-function presentAsCarousel(eventsToPresent,app,target){
+function presentAsCarousel(eventsToPresent,app,target,type){
 
     var carouselList = [];
 
@@ -113,16 +113,29 @@ function presentAsCarousel(eventsToPresent,app,target){
                 imageUrl = data.items[0].media.m;
             }
 
+            if (type == 'artist') {
+                app.ask(app.buildRichResponse()
+                    // Create a basic card and add it to the rich response
+                        .addSimpleResponse('There is just one place ' + target + ' is playing:')
+                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
+                            .setTitle(event.venue.name)
+                            .setImage(imageUrl, 'Image alternate text')
+                            .setImageDisplay('CROPPED')
+                        )
+                );
+            }
+            if (type == 'city') {
+                app.ask(app.buildRichResponse()
+                    // Create a basic card and add it to the rich response
+                        .addSimpleResponse('There is only one event in ' + target + ' you might be interested in:')
+                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
+                            .setTitle(event.venue.name)
+                            .setImage(imageUrl, 'Image alternate text')
+                            .setImageDisplay('CROPPED')
+                        )
+                );
+            }
 
-            app.ask(app.buildRichResponse()
-                // Create a basic card and add it to the rich response
-                    .addSimpleResponse('There is just one place ' + target + ' is playing:')
-                    .addBasicCard(app.buildBasicCard(target,event.venue.name)
-                        .setTitle(event.venue.name)
-                        .setImage(imageUrl, 'Image alternate text')
-                        .setImageDisplay('CROPPED')
-                    )
-            );
         }).catch(function(err){
             console.log("Error Occurred with Flickr: " + err);
         })
@@ -153,20 +166,32 @@ function presentAsCarousel(eventsToPresent,app,target){
 
                 console.log(imageUrl);
 
-                carouselList.push(app.buildOptionItem(event.venue.name,event.venue.city)
-                    .setTitle(event.venue.name)
+                carouselList.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime ,event.datetime)
+                    .setTitle(event.lineup + " - " + event.venue.name + " on " + event.datetime)
                     .setDescription(event.description)
                     .setImage(imageUrl, 'Artist Events'))
 
 
                 //once we have created a carousel list containing all events, we present it to the user.
                 if (carouselList.length == numOfEvents){
-                    app.askWithCarousel('Alright, here are some places ' + target + ' is playing:',
-                        // Build a carousel
-                        app.buildCarousel()
-                        // Add the first item to the carousel
-                            .addItems(carouselList)
-                    );
+
+                    if (type == 'artist'){
+                        app.askWithCarousel('Alright, here are some places ' + target + ' is playing:',
+                            // Build a carousel
+                            app.buildCarousel()
+                            // Add the first item to the carousel
+                                .addItems(carouselList)
+                        );
+                    }
+                    if (type == 'city'){
+                        app.askWithCarousel('Alright, here are some events within ' + target + ' in the next year:',
+                            // Build a carousel
+                            app.buildCarousel()
+                            // Add the first item to the carousel
+                                .addItems(carouselList)
+                        );
+                    }
+
                 }
 
 
@@ -175,13 +200,18 @@ function presentAsCarousel(eventsToPresent,app,target){
             });
         }
     } else if (numOfEvents == 0){
-        app.tell("I'm sorry, I wasn't able to find any events in the next year for " + target);
+        if (type == 'artist'){
+            app.tell("I'm sorry, I wasn't able to find any events in the next year for " + target);
+        }
+        if (type == 'city'){
+            app.tell("I'm sorry, I wasn't able to find any events you would be interested in within " + target + " in the next year");
+        }
     }
 }
 
 
 
-function presentAsList(eventsToPresent,app,target){
+function presentAsList(eventsToPresent,app,target,type){
     var list = [];
 
     var events = eventsToPresent;
@@ -210,15 +240,31 @@ function presentAsList(eventsToPresent,app,target){
             }
 
 
-            app.ask(app.buildRichResponse()
-                // Create a basic card and add it to the rich response
-                    .addSimpleResponse('There is just one place ' + target + ' is playing:')
-                    .addBasicCard(app.buildBasicCard(target,event.venue.name)
-                        .setTitle(event.venue.name)
-                        .setImage(imageUrl, 'Image alternate text')
-                        .setImageDisplay('CROPPED')
-                    )
-            );
+            if (type == 'artist'){
+                app.ask(app.buildRichResponse()
+                    // Create a basic card and add it to the rich response
+                        .addSimpleResponse('There is just one place ' + target + ' is playing:')
+                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
+                            .setTitle(event.venue.name)
+                            .setImage(imageUrl, 'Image alternate text')
+                            .setImageDisplay('CROPPED')
+                        )
+                );
+            }
+
+            if (type == 'city'){
+                app.ask(app.buildRichResponse()
+                    // Create a basic card and add it to the rich response
+                        .addSimpleResponse('Ok, here are some events happening in ' + target + ' this year:')
+                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
+                            .setTitle(event.venue.name)
+                            .setImage(imageUrl, 'Image alternate text')
+                            .setImageDisplay('CROPPED')
+                        )
+                );
+            }
+
+
         }).catch(function(err){
             console.log("Error Occurred with Flickr: " + err);
         })
@@ -247,22 +293,35 @@ function presentAsList(eventsToPresent,app,target){
                 }
 
 
-                console.log(imageUrl);
 
-                list.push(app.buildOptionItem(event.venue.name,event.venue.city)
-                    .setTitle(event.venue.name)
+                list.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime ,event.datetime)
+                    .setTitle(event.lineup + " - " + event.venue.name + " on " + event.datetime)
                     .setDescription(event.description)
                     .setImage(imageUrl, 'Artist Events'))
 
 
                 //once we have created a list containing all events, we present it to the user.
                 if (list.length == numOfEvents){
-                    app.askWithList('Alright, here are some places ' + target + ' is playing:',
-                        // Build a list
-                        app.buildList()
-                        // Add the first item to the list
-                            .addItems(list)
-                    );
+
+                    //if target is a city
+                    if (type == 'city'){
+                        app.askWithList('Alright, here are some events you might be interested in within ' + target,
+                            // Build a list
+                            app.buildList()
+                            // Add the first item to the list
+                                .addItems(list)
+                        );
+                    }
+
+                    if (type == 'artist'){
+                        app.askWithList('Alright, here are some places ' + target + ' are playing:',
+                            // Build a list
+                            app.buildList()
+                            // Add the first item to the list
+                                .addItems(list)
+                        );
+                    }
+
                 }
 
 
@@ -271,7 +330,13 @@ function presentAsList(eventsToPresent,app,target){
             });
         }
     } else if (numOfEvents == 0){
-        app.tell("I'm sorry, I wasn't able to find any events in the next year for " + target);
+        if (type == 'artist'){
+            app.tell("I'm sorry, I wasn't able to find any events in the next year for " + target);
+        }
+        if (type == 'city'){
+            app.tell("I'm sorry, I wasn't able to find any events you would be interested in within " + target + " in the next year");
+        }
+
     }
 }
 
@@ -373,9 +438,9 @@ exports.findArtistEventUserLikes = function (app) {
 
                                 if (hasScreen){
                                     if (numOfEvents >= 8){
-                                        presentAsList(targetCityEvents,app,targetCity);
+                                        presentAsList(targetCityEvents,app,targetCity,'city');
                                     } else {
-                                        presentAsCarousel(targetCityEvents,app,targetCity);
+                                        presentAsCarousel(targetCityEvents,app,targetCity,'city');
                                     }
                                 } else {
 
@@ -428,9 +493,9 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
 
         if (hasScreen){
             if (numOfEvents >= 8){
-                presentAsList(events,app,artist);
+                presentAsList(events,app,artist,'artist');
             } else {
-                presentAsCarousel(events,app,artist);
+                presentAsCarousel(events,app,artist,'artist');
             }
         } else {
 

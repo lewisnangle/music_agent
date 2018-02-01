@@ -6,7 +6,7 @@
     "cookie-parser": "^1.4.3",
     "crypto": "0.0.3",
     "firebase-admin": "^4.2.1",
-    "firebase-functions": "^0.5.5",
+    "firebase-functions": "^0.8.1",
     "geocoder": "^0.2.3",
     "jquery": "^3.2.1",
     "node-geocoder": "^3.21.1",
