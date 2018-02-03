@@ -264,6 +264,7 @@ const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
 const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_inNextYear';
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 const SONG_INFO = 'song_info';
+const VENUE_ADDRESS = 'find_venue_address';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -273,6 +274,7 @@ const MUSIC_GENRES_ARGUMENT = 'music-genres';
 const MUSIC_ARTISTS_ARGUMENT = 'music-artists';
 const SPOTIFY_USERNAME = 'spotify_username';
 const ARTIST = 'artist';
+const VENUE = 'venue';
 
 
 exports.EventAgent = functions.https.onRequest((request, response) => {
@@ -302,12 +304,36 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         return rp('http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=bd830d3d033985eb65bca44e084ecf27&artist='+artist+'&track='+song+'&format=json');
     }
 
+    function venueInfoFromTicketMaster(venue){
+        return rp('https://app.ticketmaster.com/discovery/v2/venues.json?keyword='+venue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
+    }
+
 //--------------------------------------------------------------------------------------------------------------------------
 
 
 // c. The functions
 
+    function findVenueAddress (app) {
+        let venue = app.getArgument('venue');
 
+        console.log(venue);
+
+        venueInfoFromTicketMaster(venue).then(function(res){
+            let venueData = JSON.parse(res);
+            console.log("Venue Data: " + res);
+
+            let addrLine1 = venueData._embedded.venues[0].address.line1;
+            let postCode = venueData._embedded.venues[0].postalCode;
+            let city = venueData._embedded.venues[0].city.name;
+
+            app.tell("The address of " + venue + " is :" + addrLine1 + ", " + postCode + ", " + city);
+        }).catch(function(err){
+            console.log('Error occurred getting venue info from Ticketmaster: ' + err);
+        })
+
+
+
+    }
 
     const bandsintownFunctions = require('./bandsintownFunctions');
     const skiddleFunctions = require('./skiddleFunctions');
@@ -486,6 +512,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(VENUE_ADDRESS,findVenueAddress);
     actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);
     actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,bandsintownFunctions.findArtistEventBandsintownInNextYear);
