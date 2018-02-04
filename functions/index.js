@@ -240,8 +240,18 @@ function writeSpotifyUserData(spotifyUsername,artists) {
     var userRef = db.ref('spotifyUsers/');
 
     userRef.child(spotifyUsername).set({
-        artists: artists
+        artists: artists,
+        events : null
     })
+
+}
+
+
+//write spotify user data.
+function saveEventToDatabase(spotifyUsername,event) {
+    var userRef = db.ref('spotifyUsers/'+spotifyUsername+'/events');
+
+    userRef.push(event);
 
 }
 
@@ -265,6 +275,7 @@ const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 const SONG_INFO = 'song_info';
 const VENUE_ADDRESS = 'find_venue_address';
+const SELECTED_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_user_likes-option';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -275,6 +286,7 @@ const MUSIC_ARTISTS_ARGUMENT = 'music-artists';
 const SPOTIFY_USERNAME = 'spotify_username';
 const ARTIST = 'artist';
 const VENUE = 'venue';
+
 
 
 exports.EventAgent = functions.https.onRequest((request, response) => {
@@ -312,6 +324,43 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+
+
+    function itemSelected (app) {
+        // Get the user's selection
+        const param = app.getContextArgument('actions_intent_option',
+            'OPTION').value;
+
+
+
+        if (param) {       //if the user selected an option
+
+            var event = param.substring(param.indexOf("|")+1,param.lastIndexOf("|"));   //get the JSON formatted string containing the selected event information from between the two |'s
+
+            event = JSON.parse(event);      //put event into JSON form again to be stored in database correctly
+
+            let token = app.getArgument('accesstoken');
+
+            Spotify.setAccessToken(token);
+
+            Spotify.getMe().then(function(userData){
+                var username = userData.body.id;
+                username = 'spotify:'+username;
+
+                saveEventToDatabase(username,event)  //save the event the particular user is interested in in the database
+
+                app.ask('You have saved ' + event.lineup + ' at ' + event.venue.name + ' to your interested events!');
+
+            }).catch(function(err){
+                console.log("Error getting spot user: " + err);
+            })
+
+
+
+        }
+    }
+
+
 
     function findVenueAddress (app) {
         let venue = app.getArgument('venue');
@@ -512,6 +561,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(SELECTED_EVENT,itemSelected);
     actionMap.set(VENUE_ADDRESS,findVenueAddress);
     actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);

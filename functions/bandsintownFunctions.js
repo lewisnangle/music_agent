@@ -117,8 +117,8 @@ function presentAsCarousel(eventsToPresent,app,target,type){
                 app.ask(app.buildRichResponse()
                     // Create a basic card and add it to the rich response
                         .addSimpleResponse('There is just one place ' + target + ' is playing:')
-                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
-                            .setTitle(event.venue.name)
+                        .addBasicCard(app.buildBasicCard(event.lineup + ' at ' + event.venue.name,event.description)
+                            .setTitle(event.lineup + ' at ' + event.venue.name)
                             .setImage(imageUrl, 'Image alternate text')
                             .setImageDisplay('CROPPED')
                         )
@@ -166,7 +166,7 @@ function presentAsCarousel(eventsToPresent,app,target,type){
 
                 console.log(imageUrl);
 
-                carouselList.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime ,event.datetime)
+                carouselList.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime + ' |'+JSON.stringify(event)+'|') //We pass the event here
                     .setTitle(event.lineup + " - " + event.venue.name + " on " + event.datetime)
                     .setDescription(event.description)
                     .setImage(imageUrl, 'Artist Events'))
@@ -244,8 +244,8 @@ function presentAsList(eventsToPresent,app,target,type){
                 app.ask(app.buildRichResponse()
                     // Create a basic card and add it to the rich response
                         .addSimpleResponse('There is just one place ' + target + ' is playing:')
-                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
-                            .setTitle(event.venue.name)
+                        .addBasicCard(app.buildBasicCard(event.lineup + ' at ' + event.venue.name,event.description)
+                            .setTitle(event.lineup + ' at ' + event.venue.name)
                             .setImage(imageUrl, 'Image alternate text')
                             .setImageDisplay('CROPPED')
                         )
@@ -256,8 +256,8 @@ function presentAsList(eventsToPresent,app,target,type){
                 app.ask(app.buildRichResponse()
                     // Create a basic card and add it to the rich response
                         .addSimpleResponse('Ok, here are some events happening in ' + target + ' this year:')
-                        .addBasicCard(app.buildBasicCard(target,event.venue.name)
-                            .setTitle(event.venue.name)
+                        .addBasicCard(app.buildBasicCard(event.lineup + ' at ' + event.venue.name,event.description)
+                            .setTitle(event.lineup + ' at ' + event.venue.name)
                             .setImage(imageUrl, 'Image alternate text')
                             .setImageDisplay('CROPPED')
                         )
@@ -294,7 +294,9 @@ function presentAsList(eventsToPresent,app,target,type){
 
 
 
-                list.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime ,event.datetime)
+
+
+                list.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime + ' |'+JSON.stringify(event)+'|')   //We pass the event here
                     .setTitle(event.lineup + " - " + event.venue.name + " on " + event.datetime)
                     .setDescription(event.description)
                     .setImage(imageUrl, 'Artist Events'))
@@ -428,7 +430,6 @@ exports.findArtistEventUserLikes = function (app) {
                             }
 
                             console.log("TARGET CITY EVENTS  " + targetCityEvents);
-
 
 
                             if (targetCityEvents.length > 0){
