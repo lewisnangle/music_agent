@@ -53,9 +53,6 @@ function getGoogleHomeOutput(events,cityOrArtist){
         }
     }
 
-
-
-
     var eventList = []                  //list to hold venues and events names as list
 
 
@@ -211,7 +208,7 @@ function presentAsCarousel(eventsToPresent,app,target,type){
 
 
 
-function presentAsList(eventsToPresent,app,target,type){
+exports.presentAsList = function(eventsToPresent,app,target,type){
     var list = [];
 
     var events = eventsToPresent;
@@ -256,6 +253,18 @@ function presentAsList(eventsToPresent,app,target,type){
                 app.ask(app.buildRichResponse()
                     // Create a basic card and add it to the rich response
                         .addSimpleResponse('Ok, here are some events happening in ' + target + ' this year:')
+                        .addBasicCard(app.buildBasicCard(event.lineup + ' at ' + event.venue.name,event.description)
+                            .setTitle(event.lineup + ' at ' + event.venue.name)
+                            .setImage(imageUrl, 'Image alternate text')
+                            .setImageDisplay('CROPPED')
+                        )
+                );
+            }
+
+            if (type == 'rememberedEvents'){
+                app.ask(app.buildRichResponse()
+                    // Create a basic card and add it to the rich response
+                        .addSimpleResponse("Ok, Here are the events you're interested in!")
                         .addBasicCard(app.buildBasicCard(event.lineup + ' at ' + event.venue.name,event.description)
                             .setTitle(event.lineup + ' at ' + event.venue.name)
                             .setImage(imageUrl, 'Image alternate text')
@@ -317,6 +326,15 @@ function presentAsList(eventsToPresent,app,target,type){
 
                     if (type == 'artist'){
                         app.askWithList('Alright, here are some places ' + target + ' are playing:',
+                            // Build a list
+                            app.buildList()
+                            // Add the first item to the list
+                                .addItems(list)
+                        );
+                    }
+
+                    if (type == 'rememberedEvents'){
+                        app.askWithList('Alright, here are your interested events',
                             // Build a list
                             app.buildList()
                             // Add the first item to the list

@@ -275,7 +275,8 @@ const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 const SONG_INFO = 'song_info';
 const VENUE_ADDRESS = 'find_venue_address';
-const SELECTED_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_user_likes-option';
+const SAVE_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_user_likes-option';
+const SAVED_EVENTS = 'saved.events';
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -325,8 +326,50 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 // c. The functions
 
+    function getSavedEvents (app){
 
-    function itemSelected (app) {
+        let token = app.getArgument('accesstoken');
+        Spotify.setAccessToken(token);
+
+        Spotify.getMe().then(function(userData){
+
+            var username = userData.body.id;
+            username = 'spotify:'+username;
+
+            var eventRef = db.ref('spotifyUsers/'+username+'/events');
+
+            eventRef.once("value",snapshot => {
+
+                let eventsInDatabase = snapshot.val();
+
+                let eventList = [];
+
+                var x
+                for (x in eventsInDatabase){
+                    eventList.push(eventsInDatabase[x]);
+                }
+
+
+                console.log(eventList);
+
+
+                bandsintownFunctions.presentAsList(eventList,app,'','rememberedEvents');
+
+
+
+            });
+
+
+          //  app.tell("I have printed your events to the console!");
+
+        }).catch(function(err){
+            console.log("Error occurred when getting spotify user: " + err);
+        })
+
+    }
+
+
+    function saveEvent (app) {
         // Get the user's selection
         const param = app.getContextArgument('actions_intent_option',
             'OPTION').value;
@@ -561,7 +604,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
-    actionMap.set(SELECTED_EVENT,itemSelected);
+    actionMap.set(SAVED_EVENTS,getSavedEvents);
+    actionMap.set(SAVE_EVENT,saveEvent);
     actionMap.set(VENUE_ADDRESS,findVenueAddress);
     actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);

@@ -6,6 +6,7 @@
   "dependencies": {
     "concert": "^2.1.0",
     "firebase-admin": "^4.2.1",
+    "firebase-functions": "^0.8.1",
     "jquery": "^3.2.1",
     "nodemailer": "^4.4.2",
     "request": "^2.83.0",
