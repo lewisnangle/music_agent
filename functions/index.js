@@ -353,7 +353,14 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                 console.log(eventList);
 
 
-                bandsintownFunctions.presentAsList(eventList,app,'','rememberedEvents');
+                let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);
+
+                if(hasScreen){
+                    presentationFunctions.presentAsList(eventList,app,'','rememberedEvents');
+                } else {
+                    app.tell("Here are your saved events: " + presentationFunctions.getGoogleHomeOutput(eventList,'city'));
+                }
+
 
 
 
@@ -373,7 +380,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         // Get the user's selection
         const param = app.getContextArgument('actions_intent_option',
             'OPTION').value;
-
 
 
         if (param) {       //if the user selected an option
@@ -427,8 +433,10 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
+    //import functions from other files
     const bandsintownFunctions = require('./bandsintownFunctions');
     const skiddleFunctions = require('./skiddleFunctions');
+    const presentationFunctions = require('./presentationFunctions');
 
 
     function songInfo (app) {
