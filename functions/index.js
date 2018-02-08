@@ -98,6 +98,7 @@ exports.redirect = functions.https.onRequest((req, res) => {
         console.log('Setting verification state:', state);
         res.cookie('state', state.toString(), {maxAge: 3600000, secure: true, httpOnly: true});
         const authorizeURL = Spotify.createAuthorizeURL(OAUTH_SCOPES, state.toString());
+        console.log(authorizeURL);
         res.redirect(authorizeURL);
     });
 });
@@ -181,8 +182,10 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
             console.log("Error fetching user data:", error);
         });
 
+    var emailAccess= email.substr(0, email.indexOf('@'));
+
     // Save the access token to the Firebase Realtime Database.
-    const databaseTask = admin.database().ref(`/spotifyAccessToken/${uid}`)
+    const databaseTask = admin.database().ref(`/spotifyAccessToken/${emailAccess}`)
         .set(accessToken);
 
 
@@ -277,6 +280,9 @@ const SONG_INFO = 'song_info';
 const VENUE_ADDRESS = 'find_venue_address';
 const SAVE_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_user_likes-option';
 const SAVED_EVENTS = 'saved.events';
+const SIGN_IN = 'input.welcome';
+
+
 
 // b. the parameters that are parsed from the make_name intent
 const ARTIST_ARGUMENT = 'music-artist';
@@ -321,10 +327,43 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         return rp('https://app.ticketmaster.com/discovery/v2/venues.json?keyword='+venue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
     }
 
+    function getOAuthUser (token) {
+        var options = {
+            method: 'GET',
+            url: 'https://eventagent.eu.auth0.com/userinfo', //You can find your URL on Client --> Settings -->
+            //Advanced Settings --> Endpoints --> OAuth User Info URL
+            headers:{
+                authorization: 'Bearer ' + token,
+            }
+        };
+
+        return rp(options);
+    }
+
 //--------------------------------------------------------------------------------------------------------------------------
 
 
 // c. The functions
+    function signIn(app) {
+        if(app.getUser().access_token){
+            let token = app.getUser().access_token;
+
+            console.log("user is signed in, token is : " + token);
+
+            getOAuthUser(token).then(function(data){
+                console.log(data);
+                let userData = JSON.parse(data);
+
+                app.ask("Hi, " + userData.given_name);
+
+            }).catch(function(err){
+                console.log("An error occurred :" + err);
+            })
+
+
+        }
+    }
+
 
     function getSavedEvents (app){
 
@@ -399,6 +438,9 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                 saveEventToDatabase(username,event)  //save the event the particular user is interested in in the database
 
                 app.ask('You have saved ' + event.lineup + ' at ' + event.venue.name + ' to your interested events!');
+
+                getSavedEvents(app);
+
 
             }).catch(function(err){
                 console.log("Error getting spot user: " + err);
@@ -568,35 +610,58 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     function spotifyLoggedIn (app) {
 
 
-        let username = "spotify:" + app.getArgument(SPOTIFY_USERNAME);       //get spotify username of current user
+      //  let username = "spotify:" + app.getArgument(SPOTIFY_USERNAME);       //get spotify username of current user
 
-        console.log("Username argument: " + username);
+        if(app.getUser().access_token){
+            let token = app.getUser().access_token;
 
-        var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
+            console.log("user is signed in, token is : " + token);
 
-        spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
-            var accessToken = snapshot.val();
-            if (accessToken){
+            getOAuthUser(token).then(function(data){
+                console.log(data);
+                let userData = JSON.parse(data);
 
-                let responseJson = {};      //custom JSON response
+                let email = userData.email;
 
-                console.log("ACCESS TOKEN INSIDE SPOTIFY ACCESS : " + accessToken);
+                var username = email.substr(0, email.indexOf('@'));
 
-                console.log(username); //??????????????????????
+                console.log("Username argument: " + username);
 
-                responseJson.speech = 'Great! You are connected, now what would you like me to do?';    //speech output of response
-                responseJson.displayText = 'Great! you are connected, now what would you like me to do?';   //text output of response
-                var contextStr = '[{"name":"spotify_access", "lifespan":4, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
-                var contextObj = JSON.parse(contextStr);    //put string in JSON object.
-                responseJson.contextOut = contextObj;       //put context object in JSON response
-                console.log('Response:'+JSON.stringify(responseJson));
-                response.json(responseJson);        //send JSON response.
+                var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
+
+                spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
+                    var accessToken = snapshot.val();
+                    if (accessToken){
+
+                        let responseJson = {};      //custom JSON response
+
+                        console.log("ACCESS TOKEN INSIDE SPOTIFY ACCESS : " + accessToken);
+
+                        console.log(username); //??????????????????????
+
+                        responseJson.speech = 'Great! You are connected, now what would you like me to do?';    //speech output of response
+                        responseJson.displayText = 'Great! you are connected, now what would you like me to do?';   //text output of response
+                        var contextStr = '[{"name":"spotify_access", "lifespan":4, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
+                        var contextObj = JSON.parse(contextStr);    //put string in JSON object.
+                        responseJson.contextOut = contextObj;       //put context object in JSON response
+                        console.log('Response:'+JSON.stringify(responseJson));
+                        response.json(responseJson);        //send JSON response.
 
 
-            } else {
-                app.tell("Are you sure you have signed in?");
-            }
-        });
+                    } else {
+                        app.tell("Are you sure you have signed in?");
+                    }
+                });
+
+
+            }).catch(function(err){
+                console.log("An error occurred :" + err);
+            })
+
+
+        }
+
+
 
     }
 
@@ -612,6 +677,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(SIGN_IN,signIn);
     actionMap.set(SAVED_EVENTS,getSavedEvents);
     actionMap.set(SAVE_EVENT,saveEvent);
     actionMap.set(VENUE_ADDRESS,findVenueAddress);

@@ -50,7 +50,7 @@ Please wait...
   function tokenReceived(data) {
     if (data.token) {
       firebase.auth().signInWithCustomToken(data.token).then(function() {
-        window.close();
+          window.close();//popup is closed and the main page will detect the sign-in through the Firebase Auth State observer and display the signed-In user information
       });
     } else {
       console.error(data);

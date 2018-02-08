@@ -84,7 +84,7 @@ exports.findArtist = function (app){
 
         var outputString = eventFormattedList.join(", \xa0");               //format string to be outputted
 
-        app.tell(outputString);                             //provide response to user
+        app.ask(outputString);                             //provide response to user
 
 
     }).catch(function(e){
@@ -121,7 +121,7 @@ exports.findBasicEvent = function (app) {
 
             var outputString = eventList.join(',  ');                    //turn events into string to be outputted through Dialogflow
 
-            app.tell("Here is a list of events happening in " + city + ": " + outputString); //provide response to user
+            app.ask("Here is a list of events happening in " + city + ": " + outputString); //provide response to user
 
         }).catch(function (err) {
             console.log("Error Occurred :" + err);          //catch errors from SkiddleEvents function
