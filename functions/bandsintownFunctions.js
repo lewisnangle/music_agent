@@ -137,11 +137,14 @@ exports.findArtistEventUserLikes = function (app) {
                                 let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT); //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
 
                                 if (hasScreen){
+                                    presentationFunctions.presentAsList(targetCityEvents,app,targetCity,'city');
+                                    /*
                                     if (numOfEvents >= 8){
                                         presentationFunctions.presentAsList(targetCityEvents,app,targetCity,'city');
                                     } else {
                                         presentationFunctions.presentAsCarousel(targetCityEvents,app,targetCity,'city');
                                     }
+                                    */
                                 } else {
 
                                     app.tell("Here are some events you might like  " + presentationFunctions.getGoogleHomeOutput(targetCityEvents,'city'));           //function to get google home formatted response
@@ -188,14 +191,17 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
         let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);    //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
 
         if (hasScreen){
+            presentationFunctions.presentAsList(events,app,artist,'artist');
+            /*
             if (numOfEvents >= 8){
                 presentationFunctions.presentAsList(events,app,artist,'artist');
             } else {
                 presentationFunctions.presentAsCarousel(events,app,artist,'artist');
             }
+            */
         } else {
 
-            app.tell(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
+            app.ask(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
 
         }
 

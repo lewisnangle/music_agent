@@ -281,6 +281,7 @@ const VENUE_ADDRESS = 'find_venue_address';
 const SAVE_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_user_likes-option';
 const SAVED_EVENTS = 'saved.events';
 const SIGN_IN = 'input.welcome';
+const DELETE_SAVED_EVENT = 'getSavedEvents.getSavedEvents-custom';
 
 
 
@@ -344,7 +345,102 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
-    function signIn(app) {
+    function deleteSavedEvent (app){
+
+        const param = app.getContextArgument('actions_intent_option',
+            'OPTION').value;
+
+        if (param) {
+            var event = param.substring(param.indexOf("|")+1,param.lastIndexOf("|"));   //get the JSON formatted string containing the selected event information from between the two |'s
+
+            event = JSON.parse(event);      //put event into JSON form to be stored in database correctly
+
+            let token = app.getArgument('accesstoken');
+
+            Spotify.setAccessToken(token);
+
+            Spotify.getMe().then(function(userData){
+
+                var username = userData.body.id;
+                username = 'spotify:'+username;
+
+                var eventRef = db.ref('spotifyUsers/'+username+'/events');
+
+                eventRef.once("value",snapshot => {
+
+                    let eventsInDatabase = snapshot.val();
+
+                    console.log("Event id to delete: " + event.id);
+
+                    var x;
+                    for (x in eventsInDatabase){
+                        console.log("Event ids that are saved: " + eventsInDatabase[x].id);
+                        if (eventsInDatabase[x].id == event.id){
+                            console.log("Event To be removed : " + x);
+                            let deleteRef = db.ref('spotifyUsers/'+username+'/events/'+x);
+
+                            deleteRef.remove().then(function(){
+
+                                eventRef.once("value",snapshot => {
+
+                                    let eventsInDatabase = snapshot.val();
+
+                                    let eventList = [];
+
+                                    var x
+                                    for (x in eventsInDatabase){
+                                        eventList.push(eventsInDatabase[x]);
+                                    }
+
+
+                                    console.log(eventList);
+
+
+                                    let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);
+
+                                    if(hasScreen){
+                                        presentationFunctions.presentAsList(eventList,app,'','rememberedEvents');
+                                    } else {
+                                        app.tell("Event successfully removed. Here are your saved events: " + presentationFunctions.getGoogleHomeOutput(eventList,'city'));
+                                    }
+
+                                });
+
+                            }).catch(function(){
+                                console.log("Error Occurred with removing the event.")
+                            })
+
+                        }
+                    }
+
+                });
+
+               // app.ask(event);
+
+                /*
+                eventRef.remove()
+                    .then(function() {
+                        console.log("Event removed.")
+                    })
+                    .catch(function(error) {
+                        console.log("Remove failed: " + error.message)
+                    });
+
+                */
+
+                //  app.tell("I have printed your events to the console!");
+
+            }).catch(function(err){
+                console.log("Error occurred when getting spotify user: " + err);
+            })
+
+        }
+
+
+    }
+
+
+    function signIn (app) {
         if(app.getUser().access_token){
             let token = app.getUser().access_token;
 
@@ -352,9 +448,18 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
             getOAuthUser(token).then(function(data){
                 console.log(data);
+
                 let userData = JSON.parse(data);
 
-                app.ask("Hi, " + userData.given_name);
+                let name = userData.given_name;
+
+                if (name === undefined){
+                    name = userData.nickname;
+                } else {
+                    name = userData.name;
+                }
+
+                app.ask("Hi, " + name);
 
             }).catch(function(err){
                 console.log("An error occurred :" + err);
@@ -368,6 +473,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     function getSavedEvents (app){
 
         let token = app.getArgument('accesstoken');
+
         Spotify.setAccessToken(token);
 
         Spotify.getMe().then(function(userData){
@@ -425,7 +531,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
             var event = param.substring(param.indexOf("|")+1,param.lastIndexOf("|"));   //get the JSON formatted string containing the selected event information from between the two |'s
 
-            event = JSON.parse(event);      //put event into JSON form again to be stored in database correctly
+            event = JSON.parse(event);      //put event into JSON form to be stored in database correctly
 
             let token = app.getArgument('accesstoken');
 
@@ -589,7 +695,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                             writeSpotifyUserData(username,artistsCombined);
 
 
-                            app.tell("The artists you like are :" + artistsCombined);
+                            app.ask("The artists you like are :" + artistsCombined);
 
 
                         }).catch(function(err){
@@ -637,8 +743,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
                         console.log("ACCESS TOKEN INSIDE SPOTIFY ACCESS : " + accessToken);
 
-                        console.log(username); //??????????????????????
-
                         responseJson.speech = 'Great! You are connected, now what would you like me to do?';    //speech output of response
                         responseJson.displayText = 'Great! you are connected, now what would you like me to do?';   //text output of response
                         var contextStr = '[{"name":"spotify_access", "lifespan":4, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
@@ -677,6 +781,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(DELETE_SAVED_EVENT,deleteSavedEvent);
     actionMap.set(SIGN_IN,signIn);
     actionMap.set(SAVED_EVENTS,getSavedEvents);
     actionMap.set(SAVE_EVENT,saveEvent);
