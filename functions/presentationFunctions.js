@@ -4,6 +4,105 @@ function flickrRequest (keyword){
     return rp('https://api.flickr.com/services/feeds/photos_public.gne?tags=' + keyword +'&format=json');
 }
 
+exports.presentBarsAsList = function(eventsToPresent,app){
+    var list = [];
+
+    var events = eventsToPresent;
+    var numOfEvents = eventsToPresent.length;
+
+
+    //if just one event, we need to present basic card to user. Otherwise present them with list.
+    if (numOfEvents == 1){
+
+        let event = events[0];
+
+        //flickr request to get photo of venue
+        flickrRequest(event.name).then(function(res){
+            //manipulate the Flickr API response so that it is in JSON form
+            var data = res.substring(15);
+            data = data.slice(0,-1);
+            data = JSON.parse(data);
+
+
+            var imageUrl;   //get image url of picture of venue
+
+            if (data.items[0] == undefined){
+                imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
+            } else {
+                imageUrl = data.items[0].media.m;
+            }
+
+            app.ask(app.buildRichResponse()
+                // Create a basic card and add it to the rich response
+                    .addSimpleResponse("Ok, Here is a bar near the venue!")
+                    .addBasicCard(app.buildBasicCard(event.name + ' at ' + event.rating,event.formatted_address)
+                        .setTitle(event.name + " ---- " + "Rating: " + event.rating + ' at ' + event.formatted_address)
+                        .setImage(imageUrl, 'Image alternate text')
+                        .setImageDisplay('CROPPED')
+                    )
+            );
+
+
+        }).catch(function(err){
+            console.log("Error Occurred with Flickr: " + err);
+        })
+
+        //more than one event, so we can present the user with a list
+    } else if (numOfEvents >= 2) {
+
+        for (let i = 0; i < numOfEvents; i++){
+            let event = events[i];
+
+            //flickr request to get photo of venue
+            flickrRequest(event.name).then(function(res){
+                //manipulate the Flickr API response so that it is in JSON form
+                var data = res.substring(15);
+                data = data.slice(0,-1);
+                data = JSON.parse(data);
+
+                console.log(data);
+
+                var imageUrl;   //get image url of picture of venue
+
+                if (data.items[0] == undefined){
+                    imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
+                } else {
+                    imageUrl = data.items[0].media.m;
+                }
+
+
+
+                list.push(app.buildOptionItem(event.name + " - " + event.rating + " on " + event.formatted_address + ' |'+JSON.stringify(event)+'|')   //We pass the event here
+                    .setTitle(event.name + " ---- " + "Rating: " + event.rating + " on " + event.formatted_address)
+                    .setDescription(event.formatted_address)
+                    .setImage(imageUrl, 'Artist Events'))
+
+
+                //once we have created a list containing all events, we present it to the user.
+                if (list.length == numOfEvents){
+
+                    app.askWithList('Alright, here are some bars near the venue',
+                        // Build a list
+                        app.buildList()
+                        // Add the first item to the list
+                            .addItems(list)
+                    );
+
+
+                }
+
+
+            }).catch(function(err){
+                console.log("Error occurred with Flickr :"+ err);
+            });
+        }
+    } else if (numOfEvents == 0){
+
+        app.tell("I'm sorry, I wasn't able to find any bars near that venue");
+
+
+    }
+}
 
 
 

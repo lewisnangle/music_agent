@@ -282,6 +282,8 @@ const SAVE_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_u
 const SAVED_EVENTS = 'saved.events';
 const SIGN_IN = 'input.welcome';
 const DELETE_SAVED_EVENT = 'getSavedEvents.getSavedEvents-custom';
+//const BARS_NEAR_VENUE = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
+const SAVE_OR_BARS = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
 
 
 
@@ -328,6 +330,11 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         return rp('https://app.ticketmaster.com/discovery/v2/venues.json?keyword='+venue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
     }
 
+    function findBarAtGeocoordinates(latitude,longitude){
+        return rp('https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8&query="bar"&location='+latitude+','+longitude +'&radius=8000');
+        //return rp('https://maps.googleapis.com/maps/api/geocode/json?latlng='+latitude+',' + longitude+'&radius=8000&type=bar&key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8');
+    }
+
     function getOAuthUser (token) {
         var options = {
             method: 'GET',
@@ -345,6 +352,53 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+    function saveOrBars (app) {
+
+        console.log("saveOrBars INTENT");
+
+        const param = app.getRawInput();
+
+
+        console.log(param);
+
+        if (param) {
+            app.ask(param);
+        }
+
+
+    }
+    function barsNearVenue (app) {
+
+        const param = app.getContextArgument('actions_intent_option',
+            'OPTION').value;
+
+        console.log(param);
+
+        if (param) {
+            var event = param.substring(param.indexOf("|")+1,param.lastIndexOf("|"));   //get the JSON formatted string containing the selected event information from between the two |'s
+
+            event = JSON.parse(event);      //put event into JSON form to be stored in database correctly
+
+            let lat = event.venue.latitude;
+            let long = event.venue.longitude;
+
+            findBarAtGeocoordinates(lat,long).then(function(res){
+                console.log(res);
+                let bars = JSON.parse(res);
+
+                console.log("Bars results :" + bars.results);
+
+                presentationFunctions.presentBarsAsList(bars.results,app);
+
+            }).catch(function(err){
+                console.log("Error Occurred:  " + err );
+            })
+
+
+        }
+    }
+
+
     function deleteSavedEvent (app){
 
         const param = app.getContextArgument('actions_intent_option',
@@ -781,6 +835,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+  //  actionMap.set(SAVE_OR_BARS,saveOrBars);
+    actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
     actionMap.set(DELETE_SAVED_EVENT,deleteSavedEvent);
     actionMap.set(SIGN_IN,signIn);
     actionMap.set(SAVED_EVENTS,getSavedEvents);
