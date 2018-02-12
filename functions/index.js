@@ -284,6 +284,7 @@ const SIGN_IN = 'input.welcome';
 const DELETE_SAVED_EVENT = 'getSavedEvents.getSavedEvents-custom';
 //const BARS_NEAR_VENUE = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
 const SAVE_OR_BARS = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
+const BARS_NEAR_VENUE = 'find_bars_near_venue';
 
 
 
@@ -335,6 +336,10 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         //return rp('https://maps.googleapis.com/maps/api/geocode/json?latlng='+latitude+',' + longitude+'&radius=8000&type=bar&key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8');
     }
 
+    function findBarGivenVenueName(venueName){
+        return rp('https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8&query="bars '+venueName+'"&radius=8000');
+    }
+
     function getOAuthUser (token) {
         var options = {
             method: 'GET',
@@ -352,6 +357,30 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+    function findBarsNearVenue (app) {
+
+        const venue = app.getArgument('venue');
+
+        console.log(venue);
+
+        if (venue) {
+            findBarGivenVenueName(venue).then(function(res){
+                console.log(res);
+
+                let bars = JSON.parse(res);
+
+                console.log("Bars results :" + bars.results);
+
+                presentationFunctions.presentBarsAsList(bars.results,app);
+            }).catch(function(err){
+                console.log("Error Getting Bars near " + venue + " :" + err);
+            })
+        } else {
+            app.ask("Couldnt find a venue, could you ask that question again?");
+        }
+
+    }
+
     function saveOrBars (app) {
 
         console.log("saveOrBars INTENT");
@@ -367,6 +396,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
     }
+
     function barsNearVenue (app) {
 
         const param = app.getContextArgument('actions_intent_option',
@@ -836,7 +866,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
   //  actionMap.set(SAVE_OR_BARS,saveOrBars);
-    actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
+//    actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
+    actionMap.set(BARS_NEAR_VENUE,findBarsNearVenue);
     actionMap.set(DELETE_SAVED_EVENT,deleteSavedEvent);
     actionMap.set(SIGN_IN,signIn);
     actionMap.set(SAVED_EVENTS,getSavedEvents);
