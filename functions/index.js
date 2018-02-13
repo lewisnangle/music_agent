@@ -250,13 +250,21 @@ function writeSpotifyUserData(spotifyUsername,artists) {
 }
 
 
-//write spotify user data.
+//save event the user is interested in to the database
 function saveEventToDatabase(spotifyUsername,event) {
     var userRef = db.ref('spotifyUsers/'+spotifyUsername+'/events');
 
     userRef.push(event);
 
 }
+
+//save event the user is interested in to the database
+function saveCurrentEvent(spotifyUsername,event) {
+    var userRef = db.ref('spotifyUsers/' + spotifyUsername + '/currentEvent');
+
+    userRef.set(event);
+}
+
 
 
 
@@ -278,13 +286,15 @@ const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 const SONG_INFO = 'song_info';
 const VENUE_ADDRESS = 'find_venue_address';
-const SAVE_EVENT = 'find_events_for_artists_user_likes.find_events_for_artists_user_likes-option';
+const SAVE_EVENT = 'save_event.save_event-custom';
 const SAVED_EVENTS = 'saved.events';
 const SIGN_IN = 'input.welcome';
 const DELETE_SAVED_EVENT = 'getSavedEvents.getSavedEvents-custom';
 //const BARS_NEAR_VENUE = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
 const SAVE_OR_BARS = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
-const BARS_NEAR_VENUE = 'find_bars_near_venue';
+const BARS_NEAR_VENUE = 'bars.near.venue';
+const SAVE_EVENT_O = 'save.event';
+const EVENT_OPTION = 'event.option';
 
 
 
@@ -331,6 +341,10 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         return rp('https://app.ticketmaster.com/discovery/v2/venues.json?keyword='+venue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
     }
 
+    function ticketMasterInfo(artistAndVenue){
+        return rp('https://app.ticketmaster.com/discovery/v2/events.json?keyword='+artistAndVenue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
+    }
+
     function findBarAtGeocoordinates(latitude,longitude){
         return rp('https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8&query="bar"&location='+latitude+','+longitude +'&radius=8000');
         //return rp('https://maps.googleapis.com/maps/api/geocode/json?latlng='+latitude+',' + longitude+'&radius=8000&type=bar&key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8');
@@ -339,6 +353,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     function findBarGivenVenueName(venueName){
         return rp('https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8&query="bars '+venueName+'"&radius=8000');
     }
+
 
     function getOAuthUser (token) {
         var options = {
@@ -357,6 +372,105 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+    function eventOption (app){
+        const param = app.getContextArgument('actions_intent_option',
+            'OPTION').value;
+
+        console.log(param);
+
+        if (param) {
+            var event = param.substring(param.indexOf("|")+1,param.lastIndexOf("|"));   //get the JSON formatted string containing the selected event information from between the two |'s
+
+            event = JSON.parse(event);      //put event into JSON form to be stored in database correctly
+
+            let token = app.getArgument('accesstoken');
+
+            Spotify.setAccessToken(token);
+
+            Spotify.getMe().then(function(userData){
+
+                var username = userData.body.id;
+
+                username = 'spotify:'+username;
+
+                saveCurrentEvent(username,event)
+
+                let artistAndVenue = event.lineup + ' ' + event.venue.name;
+
+                ticketMasterInfo(artistAndVenue).then(function(res){
+
+                    let ticketMasterEvent = JSON.parse(res)._embedded.events[0];
+
+                    console.log(ticketMasterEvent);
+
+                    app.ask(app.buildRichResponse()
+                        .addSimpleResponse('You have selected '+event.lineup)
+                        .addSuggestions(
+                            ['Save to my events', 'Bars Close By'])
+                        .addBasicCard(app.buildBasicCard('You have selected '+event.lineup) // Note the two spaces before '\n' required for a
+                        // line break to be rendered in the card
+                            .setSubtitle(event.venue.name)
+                            .setTitle(ticketMasterEvent.name)
+                            .addButton('Find Tickets', ticketMasterEvent.url)
+                            .setImage(ticketMasterEvent.images[0].url, 'Image alternate text'))
+                    );
+
+                }).catch(function(err){
+                    console.log(err);
+                });
+
+
+
+            })
+
+
+
+        }
+
+    }
+
+
+
+    function saveEvent_O (app){
+
+        let token = app.getArgument('accesstoken');
+
+        console.log("ACCESSTEOKEN "+token);
+
+        Spotify.setAccessToken(token);
+
+        Spotify.getMe().then(function(userData){
+
+            var username = userData.body.id;
+            username = 'spotify:'+username;
+
+            console.log(username);
+
+            var currentEventRef = db.ref('spotifyUsers/'+username+'/currentEvent');
+
+            currentEventRef.once("value",snapshot => {
+
+                let currentEvent = snapshot.val();
+
+                saveEventToDatabase(username,currentEvent)  //save the event the particular user is interested in in the database
+
+                app.ask('You have saved ' + currentEvent.lineup + ' at ' + currentEvent.venue.name + ' to your interested events!');
+
+                getSavedEvents(app);
+
+
+            }).catch(function(err){
+                console.log(err);
+            })
+
+
+
+        }).catch(function(err){
+            console.log(err);
+        })
+
+    }
+
     function findBarsNearVenue (app) {
 
         const venue = app.getArgument('venue');
@@ -399,33 +513,45 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     function barsNearVenue (app) {
 
-        const param = app.getContextArgument('actions_intent_option',
-            'OPTION').value;
+        let token = app.getArgument('accesstoken');
 
-        console.log(param);
+        console.log("ACCESSTEOKEN "+token);
 
-        if (param) {
-            var event = param.substring(param.indexOf("|")+1,param.lastIndexOf("|"));   //get the JSON formatted string containing the selected event information from between the two |'s
+        Spotify.setAccessToken(token);
 
-            event = JSON.parse(event);      //put event into JSON form to be stored in database correctly
+        Spotify.getMe().then(function(userData){
 
-            let lat = event.venue.latitude;
-            let long = event.venue.longitude;
+            var username = userData.body.id;
+            username = 'spotify:'+username;
 
-            findBarAtGeocoordinates(lat,long).then(function(res){
-                console.log(res);
-                let bars = JSON.parse(res);
+            var currentEventRef = db.ref('spotifyUsers/'+username+'/currentEvent');
 
-                console.log("Bars results :" + bars.results);
+            currentEventRef.once("value",snapshot => {
 
-                presentationFunctions.presentBarsAsList(bars.results,app);
+                let currentEvent = snapshot.val();
 
-            }).catch(function(err){
-                console.log("Error Occurred:  " + err );
+                let lat = currentEvent.venue.latitude;
+                let long = currentEvent.venue.longitude;
+
+                findBarAtGeocoordinates(lat,long).then(function(res){
+
+                    console.log(res);
+                    let bars = JSON.parse(res);
+
+                    console.log("Bars results :" + bars.results);
+
+                    presentationFunctions.presentBarsAsList(bars.results,app);
+
+                }).catch(function(err){
+                    console.log("Error Occurred:  " + err );
+                })
             })
 
 
-        }
+        }).catch(function(err){
+            console.log(err);
+        })
+
     }
 
 
@@ -855,8 +981,18 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
     function spotifyLogin(app){
-        app.tell("Could you please open https://eventagent-401c3.firebaseapp.com in your browser"
-        + " and sign into spotify. Then tell dialogflow that you have logged in.");
+
+        app.ask(app.buildRichResponse()
+            // Create a basic card and add it to the rich response
+                .addSimpleResponse('Spotify Login')
+                .addBasicCard(app.buildBasicCard('Could you please log into Spotify')
+                    .setTitle('Log into Spotify')
+                    .addButton('Log In', 'https://eventagent-401c3.firebaseapp.com')
+                    .setImage('//logo.clearbit.com/spotify.com', 'Image alternate text')
+                    .setImageDisplay('CROPPED')
+                )
+        );
+
     }
 
 
@@ -866,8 +1002,10 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
   //  actionMap.set(SAVE_OR_BARS,saveOrBars);
-//    actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
-    actionMap.set(BARS_NEAR_VENUE,findBarsNearVenue);
+    actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
+    actionMap.set(EVENT_OPTION,eventOption);
+    actionMap.set(SAVE_EVENT_O,saveEvent_O);
+  //  actionMap.set(BARS_NEAR_VENUE,findBarsNearVenue);
     actionMap.set(DELETE_SAVED_EVENT,deleteSavedEvent);
     actionMap.set(SIGN_IN,signIn);
     actionMap.set(SAVED_EVENTS,getSavedEvents);

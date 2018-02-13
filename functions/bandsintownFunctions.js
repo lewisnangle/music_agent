@@ -39,6 +39,22 @@ function userTopArtists (token){
 }
 
 
+//save event the user is interested in to the database
+function saveCurrentEventsToDatabase(spotifyUsername,events) {
+    var userRef = db.ref('spotifyUsers/'+spotifyUsername+'/currentEvents');
+
+    userRef.remove().then(function(){
+
+        for (var x in events){
+            userRef.push(events[x]);
+        }
+
+    }).catch(function(err){
+        console.log("Error in replacing currentEvents " +err);
+    })
+}
+
+
 
 
 
@@ -183,27 +199,44 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
         var events = JSON.parse(res);
         var numOfEvents = events.length;
 
-
         console.log("event Data.......... : " + events);
 
         console.log("Number of events? : "+ numOfEvents );
 
-        let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);    //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
+        let token = app.getArgument('accesstoken');
 
-        if (hasScreen){
-            presentationFunctions.presentAsList(events,app,artist,'artist');
-            /*
-            if (numOfEvents >= 8){
+        console.log("Access token inside sdgsdgdsg"+ token);
+
+        Spotify.setAccessToken(token);
+
+        Spotify.getMe().then(function(userData){
+
+            var username = userData.body.id;
+            username = 'spotify:'+username;
+
+            saveCurrentEventsToDatabase(username,events);
+
+            let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);    //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
+
+            if (hasScreen){
                 presentationFunctions.presentAsList(events,app,artist,'artist');
+                /*
+                 if (numOfEvents >= 8){
+                 presentationFunctions.presentAsList(events,app,artist,'artist');
+                 } else {
+                 presentationFunctions.presentAsCarousel(events,app,artist,'artist');
+                 }
+                 */
             } else {
-                presentationFunctions.presentAsCarousel(events,app,artist,'artist');
+
+                app.ask(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
+
             }
-            */
-        } else {
+        }).catch(function(err){
+            console.log(err);
+        })
 
-            app.ask(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
 
-        }
 
     }).catch(function(err){
         console.log("Error Occurred! " + err);
