@@ -184,6 +184,8 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
 
     var emailAccess= email.substr(0, email.indexOf('@'));
 
+    emailAccess = emailAccess.split('.').join("X");
+
     // Save the access token to the Firebase Realtime Database.
     const databaseTask = admin.database().ref(`/spotifyAccessToken/${emailAccess}`)
         .set(accessToken);
@@ -265,6 +267,30 @@ function saveCurrentEvent(spotifyUsername,event) {
     userRef.set(event);
 }
 
+function getCurrentEvents(spotifyUsername){
+    var currentEventsRef = db.ref('spotifyUsers/' + spotifyUsername + '/currentEvents');
+
+    currentEventsRef.once("value",snapshot => {
+        let currentEvents = snapshot.val();
+        return currentEvents;
+    })
+
+
+}
+
+//get a users top artists
+function userTopArtists (token){
+    var options = {
+        uri: 'https://api.spotify.com/v1/me/top/artists?limit=50',
+        headers: {
+            'User-Agent': 'Request-Promise',
+            'Authorization': 'Bearer ' + token
+        },
+        json: true // Automatically parses the JSON string in the response
+    };
+    return rp(options)
+}
+
 
 
 
@@ -276,8 +302,8 @@ const App = require('actions-on-google').DialogflowApp;
 
 
 // a. the action name from the Dialogflow intent
-const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
-const FIND_ARTIST = 'find_artist';
+//const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
+//const FIND_ARTIST = 'find_artist';
 const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
@@ -295,6 +321,7 @@ const SAVE_OR_BARS = 'find_artist_event_bandsintown_inNextYear.find_artist_event
 const BARS_NEAR_VENUE = 'bars.near.venue';
 const SAVE_EVENT_O = 'save.event';
 const EVENT_OPTION = 'event.option';
+const CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME = 'choose.artist.from.events.found';
 
 
 
@@ -316,21 +343,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     console.log('Request headers: ' + JSON.stringify(request.headers));
     console.log('Request body: ' + JSON.stringify(request.body));
-
-
-
-//get a users top artists
-    function userTopArtists (token){
-        var options = {
-            uri: 'https://api.spotify.com/v1/me/top/artists?limit=50',
-            headers: {
-                'User-Agent': 'Request-Promise',
-                'Authorization': 'Bearer ' + token
-            },
-            json: true // Automatically parses the JSON string in the response
-        };
-        return rp(options)
-    }
 
 
     function songInfoFromLastFM(artist,song){
@@ -372,6 +384,60 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+    function chooseArtistFromEventsFoundGHOME(app){
+        let artist = app.getArgument('artist');
+
+        let token = app.getArgument('accesstoken');
+
+        Spotify.setAccessToken(token);
+
+        Spotify.getMe().then(function(userData){
+            var username = userData.body.id;
+            username = 'spotify:'+username;
+
+            var currentEventsRef = db.ref('spotifyUsers/'+username+'/currentEvents/');
+
+            currentEventsRef.once("value",snapshot => {
+
+
+                let eventsInDatabase = snapshot.val();
+
+                let eventList = [];
+
+                var x
+                for (x in eventsInDatabase){
+                    if(eventsInDatabase[x].lineup == artist){
+                        eventList.push(eventsInDatabase[x]);
+                    }
+                }
+
+                for(x in eventList){
+                    saveEventToDatabase(username,eventList[x]);  //save the events the user is interested in in the database
+                }
+
+
+                if(eventList.length == 1){
+                    app.tell("Ok, there is one event that " + artist + " is playing at. I have saved it to your events.")
+                } else {
+                    app.tell("Ok, there are " + eventList.length + " events for " + artist + ". I have saved them to your events.");
+                }
+
+
+
+
+            }).catch(function(err){
+                console.log(err);
+            })
+
+
+
+
+        })
+
+    }
+
+
+
     function eventOption (app){
         const param = app.getContextArgument('actions_intent_option',
             'OPTION').value;
@@ -434,8 +500,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     function saveEvent_O (app){
 
         let token = app.getArgument('accesstoken');
-
-        console.log("ACCESSTEOKEN "+token);
 
         Spotify.setAccessToken(token);
 
@@ -941,6 +1005,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
                 var username = email.substr(0, email.indexOf('@'));
 
+                username = username.split('.').join("X");
+
                 console.log("Username argument: " + username);
 
                 var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
@@ -1001,6 +1067,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME,chooseArtistFromEventsFoundGHOME);
   //  actionMap.set(SAVE_OR_BARS,saveOrBars);
     actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
     actionMap.set(EVENT_OPTION,eventOption);
@@ -1018,8 +1085,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
     actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
-    actionMap.set(FIND_BASIC_EVENTS_ACTION,skiddleFunctions.findBasicEvent);
-    actionMap.set(FIND_ARTIST,skiddleFunctions.findArtist);
+ //   actionMap.set(FIND_BASIC_EVENTS_ACTION,skiddleFunctions.findBasicEvent);
+ //   actionMap.set(FIND_ARTIST,skiddleFunctions.findArtist);
 
 
     app.handleRequest(actionMap);

@@ -4,6 +4,7 @@ var rp = require('request-promise');
 const functions = require('firebase-functions');
 
 var funcs = require('./functions.js');
+var skiddle = require('./skiddleFunctions.js');
 
 //import functions from other files
 const presentationFunctions = require('./presentationFunctions');
@@ -55,7 +56,11 @@ function saveCurrentEventsToDatabase(spotifyUsername,events) {
 }
 
 
-
+var uniqueA = function(xs) {
+    return xs.filter(function(x, i) {
+        return xs.indexOf(x) === i
+    })
+}
 
 
 //get bandsintown events for an artist
@@ -125,6 +130,8 @@ exports.findArtistEventUserLikes = function (app) {
 
                         count++;
 
+                        let artistsWithEvents = [];              //to hold artists we have found which are having events (google home output)
+
                         if (count == artists.length){           //we have got events for each artist from bandsintown
 
                             console.log(eventArtistDict);
@@ -138,13 +145,22 @@ exports.findArtistEventUserLikes = function (app) {
                                     for (let i = 0; i < eventArtistDict[key].length; i++){
                                         if (eventArtistDict[key][i].venue.city == targetCity){  //if the city the potential event is in is the same as the target city
                                             targetCityEvents.push(eventArtistDict[key][i]);     //we have found an event the user will be interested in in the relevant city
+                                            artistsWithEvents.push((eventArtistDict[key][i].lineup).join())
                                         }
                                     }
                                 }
 
                             }
 
+                            artistsWithEvents = uniqueA(artistsWithEvents) //so that each artist name only occurs once (google home)
+
+                            artistsWithEvents.splice(-1, 0, ' and ');      //insert 'and' as second from last item in array so that agents grammar is correct
+
+                            console.log(artistsWithEvents);
+
                             console.log("TARGET CITY EVENTS  " + targetCityEvents);
+
+                            saveCurrentEventsToDatabase(username,targetCityEvents);     //save current events found to database
 
 
                             if (targetCityEvents.length > 0){
@@ -162,8 +178,9 @@ exports.findArtistEventUserLikes = function (app) {
                                     }
                                     */
                                 } else {
-
-                                    app.tell("Here are some events you might like  " + presentationFunctions.getGoogleHomeOutput(targetCityEvents,'city'));           //function to get google home formatted response
+                                    console.log("EVENT ARTISTS FOUND : " + artistsWithEvents);
+                                    app.ask("I have found you some events that " + artistsWithEvents + " are playing at. Would you be interested in seeing any of them?");
+                                    //app.tell("Here are some events you might like  " + presentationFunctions.getGoogleHomeOutput(targetCityEvents,'city'));           //function to get google home formatted response
 
                                 }
 
@@ -205,8 +222,6 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
 
         let token = app.getArgument('accesstoken');
 
-        console.log("Access token inside sdgsdgdsg"+ token);
-
         Spotify.setAccessToken(token);
 
         Spotify.getMe().then(function(userData){
@@ -228,20 +243,19 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
                  }
                  */
             } else {
-
                 app.ask(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
-
             }
         }).catch(function(err){
             console.log(err);
         })
 
 
-
     }).catch(function(err){
+
         console.log("Error Occurred! " + err);
+
     })
 
-
-
 };
+
+

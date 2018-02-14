@@ -429,3 +429,4 @@ exports.getGoogleHomeOutput = function(events,cityOrArtist){
 
 }
 
+
