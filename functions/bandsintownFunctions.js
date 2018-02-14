@@ -231,6 +231,16 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
 
             saveCurrentEventsToDatabase(username,events);
 
+            let cityList = [];
+
+            for(var x in events){
+                cityList.push(events[x].venue.city);
+            }
+
+            cityList = uniqueA(cityList); //so that each city name only occurs once (google home)
+
+            cityList.splice(-1, 0, ' and ');      //insert 'and' as second from last item in array so that agents grammar is correct
+
             let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT);    //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
 
             if (hasScreen){
@@ -243,7 +253,8 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
                  }
                  */
             } else {
-                app.ask(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
+                app.ask("I have found some events " + artist + " is playing at in " + cityList + ". Would you be interested in seeing " + artist + " in any of these cities?" );
+                //app.ask(artist + "is playing at " + presentationFunctions.getGoogleHomeOutput(events,'artist')  );           //function to get google home formatted response
             }
         }).catch(function(err){
             console.log(err);

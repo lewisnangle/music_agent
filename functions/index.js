@@ -322,6 +322,7 @@ const BARS_NEAR_VENUE = 'bars.near.venue';
 const SAVE_EVENT_O = 'save.event';
 const EVENT_OPTION = 'event.option';
 const CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME = 'choose.artist.from.events.found';
+const CHOOSE_CITY_FROM_EVENTS_FOUND_GHOME = 'choose.city.from.events.found';
 
 
 
@@ -384,6 +385,59 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+    function chooseCityFromEventsFoundGHOME(app){
+
+        let city = app.getArgument('geo-city');
+        let token = app.getArgument('accesstoken');
+        Spotify.setAccessToken(token);
+
+        Spotify.getMe().then(function(userData){
+            var username = userData.body.id;
+            username = 'spotify:'+username;
+
+            var currentEventsRef = db.ref('spotifyUsers/'+username+'/currentEvents/');
+
+            currentEventsRef.once("value",snapshot => {
+
+
+                let eventsInDatabase = snapshot.val();
+
+                let eventList = [];
+
+                var x
+                for (x in eventsInDatabase){
+                    if(eventsInDatabase[x].venue.city == city){
+                        eventList.push(eventsInDatabase[x]);
+                    }
+                }
+
+                for(x in eventList){
+                    saveEventToDatabase(username,eventList[x]);  //save the events the user is interested in in the database
+                }
+
+                let artist = eventList[0].lineup;
+
+
+                if(eventList.length == 1){
+                    app.tell("Ok, there is one event for "+ artist + " in " + city + " I have saved it to your events.");
+                } else {
+                    app.tell("Ok, there are " + eventList.length + " events in " + city + " for " + artist + ". I have saved them to your events.");
+                }
+
+
+
+
+            }).catch(function(err){
+                console.log(err);
+            })
+
+
+        }).catch(function(err){
+            console.log(err);
+        })
+
+
+    }
     function chooseArtistFromEventsFoundGHOME(app){
         let artist = app.getArgument('artist');
 
@@ -415,11 +469,12 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     saveEventToDatabase(username,eventList[x]);  //save the events the user is interested in in the database
                 }
 
+                let city = eventList[0].venue.city;
 
                 if(eventList.length == 1){
-                    app.tell("Ok, there is one event that " + artist + " is playing at. I have saved it to your events.")
+                    app.tell("Ok, there is one event that " + artist + " is playing at in " + city + ". I have saved it to your events.")
                 } else {
-                    app.tell("Ok, there are " + eventList.length + " events for " + artist + ". I have saved them to your events.");
+                    app.tell("Ok, there are " + eventList.length + " events for " + artist + ", in " + city + ". I have saved them to your events.");
                 }
 
 
@@ -432,6 +487,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 
+        }).catch(function(err){
+            console.log(err);
         })
 
     }
@@ -1067,6 +1124,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(CHOOSE_CITY_FROM_EVENTS_FOUND_GHOME,chooseCityFromEventsFoundGHOME);
     actionMap.set(CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME,chooseArtistFromEventsFoundGHOME);
   //  actionMap.set(SAVE_OR_BARS,saveOrBars);
     actionMap.set(BARS_NEAR_VENUE,barsNearVenue);

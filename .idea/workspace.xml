@@ -4,9 +4,7 @@
     <list default="true" id="16c42e57-e359-4518-a002-5deb9f229b44" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/functions/bandsintownFunctions.js" afterPath="$PROJECT_DIR$/functions/bandsintownFunctions.js" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/functions/functions.js" afterPath="$PROJECT_DIR$/functions/functions.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/functions/index.js" afterPath="$PROJECT_DIR$/functions/index.js" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/functions/presentationFunctions.js" afterPath="$PROJECT_DIR$/functions/presentationFunctions.js" />
     </list>
     <ignored path="$PROJECT_DIR$/.tmp/" />
     <ignored path="$PROJECT_DIR$/temp/" />
@@ -30,8 +28,8 @@
       <file leaf-file-name="index.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/functions/index.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="195">
-              <caret line="409" column="60" lean-forward="false" selection-start-line="409" selection-start-column="60" selection-end-line="409" selection-end-column="60" />
+            <state relative-caret-position="399">
+              <caret line="476" column="111" lean-forward="false" selection-start-line="476" selection-start-column="111" selection-end-line="476" selection-end-column="111" />
               <folding />
             </state>
           </provider>
@@ -40,8 +38,8 @@
       <file leaf-file-name="bandsintownFunctions.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/functions/bandsintownFunctions.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="574">
-              <caret line="181" column="167" lean-forward="false" selection-start-line="181" selection-start-column="167" selection-end-line="181" selection-end-column="167" />
+            <state relative-caret-position="339">
+              <caret line="83" column="4" lean-forward="false" selection-start-line="83" selection-start-column="4" selection-end-line="83" selection-end-column="49" />
               <folding />
             </state>
           </provider>
@@ -386,12 +384,12 @@
       <workItem from="1517999590870" duration="15832000" />
       <workItem from="1518082299146" duration="48349000" />
       <workItem from="1518462598421" duration="15056000" />
-      <workItem from="1518519700423" duration="14741000" />
+      <workItem from="1518519700423" duration="17666000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="382862000" />
+    <option name="totallyTimeSpent" value="385787000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -412,7 +410,7 @@
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32876712" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3287483" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.22054794" sideWeight="0.49722" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25753424" sideWeight="0.49722" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39889959" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -649,16 +647,16 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/functions/bandsintownFunctions.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="574">
-          <caret line="181" column="167" lean-forward="false" selection-start-line="181" selection-start-column="167" selection-end-line="181" selection-end-column="167" />
+        <state relative-caret-position="339">
+          <caret line="83" column="4" lean-forward="false" selection-start-line="83" selection-start-column="4" selection-end-line="83" selection-end-column="49" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/functions/index.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="195">
-          <caret line="409" column="60" lean-forward="false" selection-start-line="409" selection-start-column="60" selection-end-line="409" selection-end-column="60" />
+        <state relative-caret-position="399">
+          <caret line="476" column="111" lean-forward="false" selection-start-line="476" selection-start-column="111" selection-end-line="476" selection-end-column="111" />
           <folding />
         </state>
       </provider>
