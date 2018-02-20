@@ -198,6 +198,16 @@ exports.findArtistEventUserLikes = function (app) {
 
         }, function(err) {
             console.log(err);
+            app.ask(app.buildRichResponse()
+                // Create a basic card and add it to the rich response
+                    .addSimpleResponse('Looks like you need to log into spotify, log in and then try again')
+                    .addBasicCard(app.buildBasicCard('Could you please log into Spotify')
+                        .setTitle('Log into Spotify')
+                        .addButton('Log In', 'https://eventagent-401c3.firebaseapp.com')
+                        .setImage('//logo.clearbit.com/spotify.com', 'Image alternate text')
+                        .setImageDisplay('CROPPED')
+                    )
+            );
         });
 
 
@@ -258,6 +268,16 @@ exports.findArtistEventBandsintownInNextYear = function (app) {
             }
         }).catch(function(err){
             console.log(err);
+            app.ask(app.buildRichResponse()
+                // Create a basic card and add it to the rich response
+                    .addSimpleResponse('Looks like you need to log into spotify, log in and then try again')
+                    .addBasicCard(app.buildBasicCard('Could you please log into Spotify')
+                        .setTitle('Log into Spotify')
+                        .addButton('Log In', 'https://eventagent-401c3.firebaseapp.com')
+                        .setImage('//logo.clearbit.com/spotify.com', 'Image alternate text')
+                        .setImageDisplay('CROPPED')
+                    )
+            );
         })
 
 

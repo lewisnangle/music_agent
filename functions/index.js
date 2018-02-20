@@ -242,12 +242,11 @@ function writeUserData(name,musicGenres,artists) {
 
 //write spotify user data.
 function writeSpotifyUserData(spotifyUsername,artists) {
-    var userRef = db.ref('spotifyUsers/');
+    var userRef = db.ref('spotifyUsers/'+spotifyUsername+'/artists/');
 
-    userRef.child(spotifyUsername).set({
-        artists: artists,
-        events : null
-    })
+    userRef.set(artists).catch(function(err){
+        console.log(err);
+    });
 
 }
 
@@ -289,6 +288,79 @@ function userTopArtists (token){
         json: true // Automatically parses the JSON string in the response
     };
     return rp(options)
+}
+
+
+
+function populateDatabaseWithSpotifyListening(token){
+    Spotify.setAccessToken(token);
+
+    console.log('The access token is ' + Spotify.getAccessToken());
+
+    //Get the authenticated user.
+    Spotify.getMe()
+        .then(function(userData) {
+            console.log('Some information about the authenticated user', userData.body);
+
+            var username = userData.body.id;
+            username = 'spotify:'+username;             //to keep spotify usernames consistent throughout app.
+
+            //Get the artist the user follows.
+            Spotify.getFollowedArtists({limit : 50})
+                .then(function(data) {
+                    let artists = data.body.artists.items;
+                    let numberOfArtists = data.body.artists.total;
+
+                    let artistList = [];
+
+
+                    //iterate through the artists the user follows and add them to artistList
+                    for (let i = 0; i < numberOfArtists; i++){
+                        try{
+                            artistList.push(artists[i].name);
+                        } catch (err) {
+                            console.log("Error occurred: " + err);
+                        }
+                    }
+
+                    //get spotify top users
+                    userTopArtists(token).then(function(res){
+                        console.log(res);
+
+                        let numTopArtists = res.total;
+                        let artistObjects = res.items;
+
+                        let topArtistList = [];
+
+                        for (let i = 0; i < numTopArtists; i ++){
+                            try {
+                                topArtistList.push(artistObjects[i].name);
+                            } catch (err) {
+                                console.log("Error occurred: " + err);
+                            }
+                        }
+                        //combine users top artists and followed artists
+
+                        var artistsCombined = funcs.arrayUnique(artistList.concat(topArtistList));
+
+                        console.log(artistsCombined);
+
+                        //write the username and artists the user likes to database.
+                        writeSpotifyUserData(username,artistsCombined);
+
+
+                    }).catch(function(err){
+                        console.log("Something went wrong went wrong when finding top artists! " + err);
+                    })
+
+                }, function(err) {
+                    console.log('Something went wrong when getting followed artists!', err);
+                });
+
+
+        }, function(err) {
+            console.log('Something went wrong when getting user!', err);
+        });
 }
 
 
@@ -477,15 +549,9 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     app.tell("Ok, there are " + eventList.length + " events for " + artist + ", in " + city + ". I have saved them to your events.");
                 }
 
-
-
-
             }).catch(function(err){
                 console.log(err);
             })
-
-
-
 
         }).catch(function(err){
             console.log(err);
@@ -773,7 +839,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     function signIn (app) {
         if(app.getUser().access_token){
-            let token = app.getUser().access_token;
+            let token = app.getUser().access_token; //account linking token
 
             console.log("user is signed in, token is : " + token);
 
@@ -781,6 +847,13 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                 console.log(data);
 
                 let userData = JSON.parse(data);
+
+                let email = userData.email;
+
+                var username = email.substr(0, email.indexOf('@'));
+
+                username = username.split('.').join("X");
+
 
                 let name = userData.given_name;
 
@@ -790,7 +863,40 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     name = userData.name;
                 }
 
-                app.ask("Hi, " + name);
+                var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
+
+                spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
+                    var accessToken = snapshot.val();             //spotify access token
+                    if (accessToken){
+
+                        populateDatabaseWithSpotifyListening(accessToken);
+
+                        let responseJson = {};      //custom JSON response
+
+                        console.log("ACCESS TOKEN INSIDE SPOTIFY ACCESS : " + accessToken);
+
+                        responseJson.speech = 'Hi, '+name+'! What can i do for you?';    //speech output of response
+                        responseJson.displayText = 'Hi, '+name+'! What can i do for you?';   //text output of response
+                        var contextStr = '[{"name":"spotify_access", "lifespan":4, "parameters":{"accesstoken": "'+ accessToken + '"}}]';   //context string, setting context to spotify_access and passing the access token as a parameter.
+                        var contextObj = JSON.parse(contextStr);    //put string in JSON object.
+                        responseJson.contextOut = contextObj;       //put context object in JSON response
+                        console.log('Response:'+JSON.stringify(responseJson));
+                        response.json(responseJson);        //send JSON response.
+
+
+                    } else {
+                        app.ask(app.buildRichResponse()
+                            // Create a basic card and add it to the rich response
+                                .addSimpleResponse('Spotify Login')
+                                .addBasicCard(app.buildBasicCard('Could you please log into Spotify')
+                                    .setTitle('Log into Spotify')
+                                    .addButton('Log In', 'https://eventagent-401c3.firebaseapp.com')
+                                    .setImage('//logo.clearbit.com/spotify.com', 'Image alternate text')
+                                    .setImageDisplay('CROPPED')
+                                )
+                        );
+                    }
+                });
 
             }).catch(function(err){
                 console.log("An error occurred :" + err);
