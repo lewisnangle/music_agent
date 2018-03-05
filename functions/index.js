@@ -184,6 +184,8 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
 
     var emailAccess= email.substr(0, email.indexOf('@'));
 
+
+
     emailAccess = emailAccess.split('.').join("X");
 
     // Save the access token to the Firebase Realtime Database.
