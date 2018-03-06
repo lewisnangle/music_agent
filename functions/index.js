@@ -397,6 +397,7 @@ const SAVE_EVENT_O = 'save.event';
 const EVENT_OPTION = 'event.option';
 const CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME = 'choose.artist.from.events.found';
 const CHOOSE_CITY_FROM_EVENTS_FOUND_GHOME = 'choose.city.from.events.found';
+const CHECK_AVAILABILITY = 'check.availability';
 
 
 
@@ -459,6 +460,65 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 // c. The functions
+    function checkAvailability(app){
+
+        let token = app.getArgument('accesstoken');
+
+        Spotify.setAccessToken(token);
+
+        Spotify.getMe().then(function(userData){
+
+            var username = userData.body.id;
+            username = 'spotify:'+username;
+
+            var currentEventRef = db.ref('spotifyUsers/'+username+'/currentEvent');
+
+            currentEventRef.once("value",snapshot => {
+
+                let currentEvent = snapshot.val();
+
+                let artistAndVenue = currentEvent.lineup + ' ' + currentEvent.venue.name;
+
+                let availablity = currentEvent.offers[0].status;
+
+                if (availablity) {
+
+                    ticketMasterInfo(artistAndVenue).then(function(res){
+
+                        let ticketMasterEvent = JSON.parse(res)._embedded.events[0];
+
+                        app.ask(app.buildRichResponse()
+                            // Create a basic card and add it to the rich response
+                                .addSimpleResponse('Looks like there are still tickets available')
+                                .addBasicCard(app.buildBasicCard('Follow the link to buy tickets')
+                                    .setTitle('Tickets available')
+                                    .addButton('Buy tickets', ticketMasterEvent.url)
+                                    .setImageDisplay('CROPPED')
+                                )
+                        );
+
+                    }).catch(function(err){
+                        console.log(err);
+                    })
+
+
+
+                } else {
+                    app.ask("Looks like there are no tickets left");
+                }
+
+
+
+                }).catch(function(err){
+                    console.log("Error Occurred:  " + err );
+                })
+
+            }).catch(function(err){
+                console.log(err);
+            })
+
+    }
+
     function chooseCityFromEventsFoundGHOME(app){
 
         let city = app.getArgument('geo-city');
@@ -597,7 +657,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     app.ask(app.buildRichResponse()
                         .addSimpleResponse('You have selected '+event.lineup)
                         .addSuggestions(
-                            ['Save to my events', 'Bars Close By'])
+                            ['Save to my events','Check Availability', 'Bars Close By'])
                         .addBasicCard(app.buildBasicCard('You have selected '+event.lineup) // Note the two spaces before '\n' required for a
                         // line break to be rendered in the card
                             .setSubtitle(event.venue.name)
@@ -703,8 +763,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     function barsNearVenue (app) {
 
         let token = app.getArgument('accesstoken');
-
-        console.log("ACCESSTEOKEN "+token);
 
         Spotify.setAccessToken(token);
 
@@ -861,9 +919,12 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
                 if (name === undefined){
                     name = userData.nickname;
-                } else {
+                }
+                if (name === undefined){
                     name = userData.name;
                 }
+
+                name = 'Joe';
 
                 var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
 
@@ -890,7 +951,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                         app.ask(app.buildRichResponse()
                             // Create a basic card and add it to the rich response
                                 .addSimpleResponse('Spotify Login')
-                                .addBasicCard(app.buildBasicCard('Could you please log into Spotify')
+                                .addBasicCard(app.buildBasicCard('Log into Spotify to get concerts specific to you!')
                                     .setTitle('Log into Spotify')
                                     .addButton('Log In', 'https://eventagent-401c3.firebaseapp.com')
                                     .setImage('//logo.clearbit.com/spotify.com', 'Image alternate text')
@@ -1216,7 +1277,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         app.ask(app.buildRichResponse()
             // Create a basic card and add it to the rich response
                 .addSimpleResponse('Spotify Login')
-                .addBasicCard(app.buildBasicCard('Could you please log into Spotify')
+                .addBasicCard(app.buildBasicCard('Log into Spotify to get concerts specific to you!')
                     .setTitle('Log into Spotify')
                     .addButton('Log In', 'https://eventagent-401c3.firebaseapp.com')
                     .setImage('//logo.clearbit.com/spotify.com', 'Image alternate text')
@@ -1232,6 +1293,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
+    actionMap.set(CHECK_AVAILABILITY,checkAvailability);
     actionMap.set(CHOOSE_CITY_FROM_EVENTS_FOUND_GHOME,chooseCityFromEventsFoundGHOME);
     actionMap.set(CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME,chooseArtistFromEventsFoundGHOME);
   //  actionMap.set(SAVE_OR_BARS,saveOrBars);
