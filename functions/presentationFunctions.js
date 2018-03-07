@@ -162,7 +162,7 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
             if (type == 'rememberedEvents'){
                 app.ask(app.buildRichResponse()
                     // Create a basic card and add it to the rich response
-                        .addSimpleResponse("Ok, Here are the events you're interested in!")
+                        .addSimpleResponse("Ok, Here are the events your saved events:")
                         .addBasicCard(app.buildBasicCard(event.lineup + ' at ' + event.venue.name,event.description)
                             .setTitle(event.lineup + ' at ' + event.venue.name)
                             .setImage(imageUrl, 'Image alternate text')
