@@ -1308,7 +1308,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     actionMap.set(VENUE_ADDRESS,findVenueAddress);
     actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);
-    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,bandsintownFunctions.findArtistEventBandsintownInNextYear);
+    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,bandsintownFunctions.findArtistEventBandsintownInDateRange);
     actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);

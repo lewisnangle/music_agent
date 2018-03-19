@@ -55,7 +55,6 @@ function saveCurrentEventsToDatabase(spotifyUsername,events) {
     })
 }
 
-
 var uniqueA = function(xs) {
     return xs.filter(function(x, i) {
         return xs.indexOf(x) === i
@@ -63,18 +62,24 @@ var uniqueA = function(xs) {
 }
 
 
+
 //get bandsintown events for an artist
-function getEventsForArtistWithinNextYear (artistString) {
+function getEventsForArtistWithinDateRange (artistString,dateRange) {
     var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
-    var dateNow = new Date().toJSON().substring(0,10);      //get date now and convert into correct format for Bandsintown API
-    var yearFromNow = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toJSON().substring(0,10);  //get date a year from now and convert into correct format for Bandsintown API
 
-    //console.log("The date now is : "+dateNow);
-    //console.log("The date a year from now... is : "+ yearFromNow);
+    var dateRange = dateRange;
 
+    console.log("DATERANGE :" + dateRange);
 
-    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+dateNow+'%2C'+yearFromNow);       //send request to Bandsintown API
+    //get start and end date from the given date range
+    var start = dateRange.slice(0, dateRange.indexOf("/"));
+    var end = dateRange.substring(dateRange.indexOf("/") + 1);
+
+    //return promise to events for artist within date range
+    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+start+'%2C'+end);       //send request to Bandsintown API
 }
+
+
 
 
 exports.findArtistEventUserLikes = function (app) {
@@ -82,6 +87,8 @@ exports.findArtistEventUserLikes = function (app) {
     //get access token of signed in user
     let token = app.getArgument('accesstoken');
     let targetCity = app.getArgument('geo-city');
+
+    let date = app.getArgument('date-period');
 
     Spotify.setAccessToken(token);
 
@@ -118,7 +125,7 @@ exports.findArtistEventUserLikes = function (app) {
                     console.log(artist);
 
                     //get events for each artist the user likes
-                    getEventsForArtistWithinNextYear(artist).then(function(res){
+                    getEventsForArtistWithinDateRange(artist,date).then(function(res){
                         var events = JSON.parse(res);
                         var numOfEvents = events.length;
 
@@ -185,7 +192,7 @@ exports.findArtistEventUserLikes = function (app) {
                                 }
 
                             } else {
-                                app.tell("Looks like there arent any events coming up you'd be interested in in " + targetCity);
+                                app.ask("Looks like there arent any events coming up you'd be interested in in " + targetCity);
                             }
 
                         }
@@ -216,11 +223,12 @@ exports.findArtistEventUserLikes = function (app) {
 
 
 
-exports.findArtistEventBandsintownInNextYear = function (app) {
+exports.findArtistEventBandsintownInDateRange = function (app) {
     let artist = app.getArgument(ARTIST);
+    let date = app.getArgument('date-period');
 
     //get events from artist name in next year with bandsintown API
-    getEventsForArtistWithinNextYear(artist).then(function(res){
+    getEventsForArtistWithinDateRange(artist,date).then(function(res){
         console.log(res);
 
         var events = JSON.parse(res);

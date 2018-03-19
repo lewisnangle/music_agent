@@ -4,6 +4,11 @@ function flickrRequest (keyword){
     return rp('https://api.flickr.com/services/feeds/photos_public.gne?tags=' + keyword +'&format=json');
 }
 
+
+function ticketMasterInfo(artistAndVenue){
+    return rp('https://app.ticketmaster.com/discovery/v2/events.json?keyword='+artistAndVenue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
+}
+
 exports.presentBarsAsList = function(eventsToPresent,app){
     var list = [];
 
@@ -119,19 +124,21 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
         let event = events[0];
 
         //flickr request to get photo of venue
-        flickrRequest(event.venue.name).then(function(res){
+        ticketMasterInfo(event.lineup).then(function(res){
+
+            /**
             //manipulate the Flickr API response so that it is in JSON form
             var data = res.substring(15);
             data = data.slice(0,-1);
             data = JSON.parse(data);
-
+            **/
 
             var imageUrl;   //get image url of picture of venue
 
-            if (data.items[0] == undefined){
+            if (ticketMasterEvent.images[0].url == undefined){
                 imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
             } else {
-                imageUrl = data.items[0].media.m;
+                imageUrl = ticketMasterEvent.images[0].url;
             }
 
 
@@ -183,24 +190,26 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
             let event = events[i];
 
             //flickr request to get photo of venue
-            flickrRequest(event.venue.name).then(function(res){
+            ticketMasterInfo(event.lineup).then(function(res){
+
+                let ticketMasterEvent = JSON.parse(res)._embedded.events[0];
+
+                /**
                 //manipulate the Flickr API response so that it is in JSON form
                 var data = res.substring(15);
                 data = data.slice(0,-1);
                 data = JSON.parse(data);
 
                 console.log(data);
+                **/
 
                 var imageUrl;   //get image url of picture of venue
 
-                if (data.items[0] == undefined){
+                if (ticketMasterEvent.images[0].url == undefined){
                     imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
                 } else {
-                    imageUrl = data.items[0].media.m;
+                    imageUrl = ticketMasterEvent.images[0].url;
                 }
-
-
-
 
 
                 list.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime + ' |'+JSON.stringify(event)+'|')   //We pass the event here
@@ -232,7 +241,7 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
                     }
 
                     if (type == 'rememberedEvents'){
-                        app.askWithList('Alright, here are your interested events',
+                        app.askWithList('Alright, here are your saved events',
                             // Build a list
                             app.buildList()
                             // Add the first item to the list
