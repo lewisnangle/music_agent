@@ -258,10 +258,10 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
         }
     } else if (numOfEvents == 0){
         if (type == 'artist'){
-            app.tell("I'm sorry, I wasn't able to find any events in the next year for " + target);
+            app.tell("I'm sorry, I wasn't able to find any events in that time for " + target);
         }
         if (type == 'city'){
-            app.tell("I'm sorry, I wasn't able to find any events you would be interested in within " + target + " in the next year");
+            app.tell("I'm sorry, I wasn't able to find any events you would be interested in within " + target + " in that time");
         }
 
     }

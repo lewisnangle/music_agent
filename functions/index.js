@@ -382,7 +382,7 @@ const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
 const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
-const FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear = 'find_artist_event_bandsintown_inNextYear';
+const FIND_ARTIST_EVENT_BANDSINTOWN = 'find_artist_event_bandsintown';
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 const SONG_INFO = 'song_info';
 const VENUE_ADDRESS = 'find_venue_address';
@@ -390,8 +390,8 @@ const SAVE_EVENT = 'save_event.save_event-custom';
 const SAVED_EVENTS = 'saved.events';
 const SIGN_IN = 'input.welcome';
 const DELETE_SAVED_EVENT = 'getSavedEvents.getSavedEvents-custom';
-//const BARS_NEAR_VENUE = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
-const SAVE_OR_BARS = 'find_artist_event_bandsintown_inNextYear.find_artist_event_bandsintown_inNextYear-custom';
+//const BARS_NEAR_VENUE = 'find_artist_event_bandsintown.find_artist_event_bandsintown-custom';
+const SAVE_OR_BARS = 'find_artist_event_bandsintown.find_artist_event_bandsintown-custom';
 const BARS_NEAR_VENUE = 'bars.near.venue';
 const SAVE_EVENT_O = 'save.event';
 const EVENT_OPTION = 'event.option';
@@ -573,7 +573,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
     function chooseArtistFromEventsFoundGHOME(app){
-        let artist = app.getArgument('artist');
+        let artist = app.getArgument('music-artist');
 
         let token = app.getArgument('accesstoken');
 
@@ -1088,7 +1088,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
     function songInfo (app) {
-        let artist = app.getArgument('artist');
+        let artist = app.getArgument('music-artist');
         let song = app.getArgument('song');
 
         songInfoFromLastFM(artist,song).then(function(res){
@@ -1308,7 +1308,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     actionMap.set(VENUE_ADDRESS,findVenueAddress);
     actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);
-    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN_inNextYear,bandsintownFunctions.findArtistEventBandsintownInDateRange);
+    actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN,bandsintownFunctions.findArtistEventBandsintownInDateRange);
     actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);

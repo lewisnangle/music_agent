@@ -224,7 +224,7 @@ exports.findArtistEventUserLikes = function (app) {
 
 
 exports.findArtistEventBandsintownInDateRange = function (app) {
-    let artist = app.getArgument(ARTIST);
+    let artist = app.getArgument('music-artist');
     let date = app.getArgument('date-period');
 
     //get events from artist name in next year with bandsintown API
