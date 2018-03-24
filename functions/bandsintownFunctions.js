@@ -3,9 +3,6 @@ const ARTIST = 'artist';
 var rp = require('request-promise');
 const functions = require('firebase-functions');
 
-var funcs = require('./functions.js');
-var skiddle = require('./skiddleFunctions.js');
-
 //import functions from other files
 const presentationFunctions = require('./presentationFunctions');
 
@@ -26,18 +23,6 @@ const Spotify = new SpotifyWebApi({
 });
 
 
-//get a users top artists
-function userTopArtists (token){
-    var options = {
-        uri: 'https://api.spotify.com/v1/me/top/artists?limit=50',
-        headers: {
-            'User-Agent': 'Request-Promise',
-            'Authorization': 'Bearer ' + token
-        },
-        json: true // Automatically parses the JSON string in the response
-    };
-    return rp(options)
-}
 
 
 //save event the user is interested in to the database
@@ -65,18 +50,37 @@ var uniqueA = function(xs) {
 
 //get bandsintown events for an artist
 function getEventsForArtistWithinDateRange (artistString,dateRange) {
-    var artistString = encodeURIComponent(artistString.trim()); //convert artist string into correct format for Bandsintown API
+
+    var artistString = encodeURIComponent(artistString); //convert artist string into correct format for Bandsintown API
+
 
     var dateRange = dateRange;
 
-    console.log("DATERANGE :" + dateRange);
 
-    //get start and end date from the given date range
-    var start = dateRange.slice(0, dateRange.indexOf("/"));
-    var end = dateRange.substring(dateRange.indexOf("/") + 1);
+   // console.log("DATERANGE :" + dateRange);
+
+    var startOfDateRange;
+    var endOfDateRange;
+
+    //if user gives no time period, then make date range from now until a year from now
+    if (dateRange == 'nothing'){
+        startOfDateRange = new Date().toJSON().substring(0,10);      //get date now and convert into correct format for Bandsintown API
+        endOfDateRange = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toJSON().substring(0,10);  //get date a year from now and convert into correct format for Bandsintown API
+
+    }
+    else {
+        //get start and end date from the given date range
+        startOfDateRange = dateRange.slice(0, dateRange.indexOf("/"));
+        endOfDateRange = dateRange.substring(dateRange.indexOf("/") + 1);
+    }
+
+    console.log(startOfDateRange)
+    console.log(endOfDateRange)
+
+
 
     //return promise to events for artist within date range
-    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+start+'%2C'+end);       //send request to Bandsintown API
+    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+startOfDateRange+'%2C'+endOfDateRange);       //send request to Bandsintown API
 }
 
 
@@ -89,6 +93,7 @@ exports.findArtistEventUserLikes = function (app) {
     let targetCity = app.getArgument('geo-city');
 
     let date = app.getArgument('date-period');
+
 
     Spotify.setAccessToken(token);
 
@@ -224,8 +229,12 @@ exports.findArtistEventUserLikes = function (app) {
 
 
 exports.findArtistEventBandsintownInDateRange = function (app) {
+    let token = app.getArgument('accesstoken');
+
     let artist = app.getArgument('music-artist');
     let date = app.getArgument('date-period');
+
+    Spotify.setAccessToken(token);
 
     //get events from artist name in next year with bandsintown API
     getEventsForArtistWithinDateRange(artist,date).then(function(res){
@@ -237,10 +246,6 @@ exports.findArtistEventBandsintownInDateRange = function (app) {
         console.log("event Data.......... : " + events);
 
         console.log("Number of events? : "+ numOfEvents );
-
-        let token = app.getArgument('accesstoken');
-
-        Spotify.setAccessToken(token);
 
         Spotify.getMe().then(function(userData){
 

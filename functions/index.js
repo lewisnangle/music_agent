@@ -172,7 +172,6 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
     // The UID we'll assign to the user.
     const uid = `spotify:${spotifyID}`;
 
-    //var uniqueCode = uid + Math.floor(Math.random() * 100);
 
     admin.auth().getUser(uid)
         .then(function(userRecord) {
@@ -182,11 +181,11 @@ function createFirebaseAccount(spotifyID, displayName, photoURL, email, accessTo
             console.log("Error fetching user data:", error);
         });
 
+
     var emailAccess= email.substr(0, email.indexOf('@'));
-
-
-
     emailAccess = emailAccess.split('.').join("X");
+    emailAccess = emailAccess.toLowerCase();
+
 
     // Save the access token to the Firebase Realtime Database.
     const databaseTask = admin.database().ref(`/spotifyAccessToken/${emailAccess}`)
@@ -375,14 +374,11 @@ process.env.DEBUG = 'actions-on-google:*';
 const App = require('actions-on-google').DialogflowApp;
 
 
-// a. the action name from the Dialogflow intent
-//const FIND_BASIC_EVENTS_ACTION = 'find_basic_events';
-//const FIND_ARTIST = 'find_artist';
+//The action names from the Dialogflow intents
 const SPOTIFY_LOGIN_ACTION = 'spotify_login';
 const SPOTIFY_LOGGED_IN_ACTION = 'spotify_logged_in';
 const SPOTIFY_ACCESS_ACTION = 'spotify_access';
-const SPOTIFY_SONG_RECOMMENDATION = 'spotify_song_recommendation';
-const FIND_ARTIST_EVENT_BANDSINTOWN = 'find_artist_event_bandsintown';
+const FIND_ARTIST_EVENT_BANDSINTOWN = 'find.artist.event';
 const FIND_ARTIST_EVENT_USER_LIKES = 'find_events_for_artists_user_likes';
 const SONG_INFO = 'song_info';
 const VENUE_ADDRESS = 'find_venue_address';
@@ -390,9 +386,8 @@ const SAVE_EVENT = 'save_event.save_event-custom';
 const SAVED_EVENTS = 'saved.events';
 const SIGN_IN = 'input.welcome';
 const DELETE_SAVED_EVENT = 'getSavedEvents.getSavedEvents-custom';
-//const BARS_NEAR_VENUE = 'find_artist_event_bandsintown.find_artist_event_bandsintown-custom';
-const SAVE_OR_BARS = 'find_artist_event_bandsintown.find_artist_event_bandsintown-custom';
 const BARS_NEAR_VENUE = 'bars.near.venue';
+const BARS_NEAR_VENUE_BY_NAME = 'find_bars_near_venue';
 const SAVE_EVENT_O = 'save.event';
 const EVENT_OPTION = 'event.option';
 const CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME = 'choose.artist.from.events.found';
@@ -414,6 +409,7 @@ const VENUE = 'venue';
 
 
 exports.EventAgent = functions.https.onRequest((request, response) => {
+
     const app = new App({request, response});
 
 
@@ -657,7 +653,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     app.ask(app.buildRichResponse()
                         .addSimpleResponse('You have selected '+event.lineup)
                         .addSuggestions(
-                            ['Save to my events','Check Availability', 'Bars Close By'])
+                            ['Save to my events','Check Availability'])
                         .addBasicCard(app.buildBasicCard('You have selected '+event.lineup) // Note the two spaces before '\n' required for a
                         // line break to be rendered in the card
                             .setSubtitle(event.venue.name)
@@ -720,7 +716,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-    function findBarsNearVenue (app) {
+    function barsNearVenueByName(app){
 
         const venue = app.getArgument('venue');
 
@@ -744,21 +740,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-    function saveOrBars (app) {
 
-        console.log("saveOrBars INTENT");
-
-        const param = app.getRawInput();
-
-
-        console.log(param);
-
-        if (param) {
-            app.ask(param);
-        }
-
-
-    }
 
     function barsNearVenue (app) {
 
@@ -897,7 +879,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     }
 
 
-    function signIn (app) {
+    function signIn(app){
         if(app.getUser().access_token){
             let token = app.getUser().access_token; //account linking token
 
@@ -924,12 +906,16 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     name = userData.name;
                 }
 
-                name = 'Joe';
+                console.log("Users name: " + name);
+
+                console.log("The user's username: " + username);
 
                 var spotifyAccessRef = db.ref('spotifyAccessToken/' + username);            //get access token from spotify username in database
 
+                console.log(username);
                 spotifyAccessRef.once("value",snapshot => {     //check if the user has logged into spotify.
                     var accessToken = snapshot.val();             //spotify access token
+
                     if (accessToken){
 
                         populateDatabaseWithSpotifyListening(accessToken);
@@ -1111,20 +1097,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 
-    function spotifySongRecommendation (app) {
-
-        //"Can you recommend me something i can dance to?"
-        //"Can you recommend me something fast?"
-
-
-        //Create a function which has parameters the same as the Tuneable Track attributes in the Spotify Web API.
-        //Then make a request for a recommendation to the Spotify Web API with those attributes as headers.
-
-        //Javascipt functions with optional parameters?
-
-
-
-    }
 
 
     //function to populate database with information from the user's spotify
@@ -1289,18 +1261,15 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
 
-
-
-    // d. build an action map, which maps intent names to functions
+    //Action map which maps intent names to functions
     let actionMap = new Map();
     actionMap.set(CHECK_AVAILABILITY,checkAvailability);
     actionMap.set(CHOOSE_CITY_FROM_EVENTS_FOUND_GHOME,chooseCityFromEventsFoundGHOME);
     actionMap.set(CHOOSE_ARTIST_FROM_EVENTS_FOUND_GHOME,chooseArtistFromEventsFoundGHOME);
-  //  actionMap.set(SAVE_OR_BARS,saveOrBars);
     actionMap.set(BARS_NEAR_VENUE,barsNearVenue);
+    actionMap.set(BARS_NEAR_VENUE_BY_NAME,barsNearVenueByName);
     actionMap.set(EVENT_OPTION,eventOption);
     actionMap.set(SAVE_EVENT_O,saveEvent_O);
-  //  actionMap.set(BARS_NEAR_VENUE,findBarsNearVenue);
     actionMap.set(DELETE_SAVED_EVENT,deleteSavedEvent);
     actionMap.set(SIGN_IN,signIn);
     actionMap.set(SAVED_EVENTS,getSavedEvents);
@@ -1309,12 +1278,10 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     actionMap.set(SONG_INFO,songInfo);
     actionMap.set(FIND_ARTIST_EVENT_USER_LIKES,bandsintownFunctions.findArtistEventUserLikes);
     actionMap.set(FIND_ARTIST_EVENT_BANDSINTOWN,bandsintownFunctions.findArtistEventBandsintownInDateRange);
-    actionMap.set(SPOTIFY_SONG_RECOMMENDATION,spotifySongRecommendation);
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
     actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
- //   actionMap.set(FIND_BASIC_EVENTS_ACTION,skiddleFunctions.findBasicEvent);
- //   actionMap.set(FIND_ARTIST,skiddleFunctions.findArtist);
+
 
 
     app.handleRequest(actionMap);

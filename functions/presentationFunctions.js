@@ -192,6 +192,8 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
             //flickr request to get photo of venue
             ticketMasterInfo(event.lineup).then(function(res){
 
+                console.log("Event : " + event.lineup + "  res " + res);
+
                 let ticketMasterEvent = JSON.parse(res)._embedded.events[0];
 
                 /**
@@ -205,6 +207,7 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
 
                 var imageUrl;   //get image url of picture of venue
 
+                //if no image set a default image
                 if (ticketMasterEvent.images[0].url == undefined){
                     imageUrl = 'http://oi68.tinypic.com/255mgle.jpg';
                 } else {
@@ -212,9 +215,14 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
                 }
 
 
+
+                var datetime = event.datetime;
+                datetime = datetime.replace("T", ", at ");
+                console.log("DateTime :" + datetime);
+
                 list.push(app.buildOptionItem(event.lineup + " - " + event.venue.name + " on " + event.datetime + ' |'+JSON.stringify(event)+'|')   //We pass the event here
-                    .setTitle(event.lineup + " - " + event.venue.name + " on " + event.datetime)
-                    .setDescription(event.description)
+                    .setTitle(event.lineup + " - " + event.venue.name + "      " + event.description)
+                    .setDescription(datetime)
                     .setImage(imageUrl, 'Artist Events'))
 
 
@@ -258,10 +266,10 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
         }
     } else if (numOfEvents == 0){
         if (type == 'artist'){
-            app.tell("I'm sorry, I wasn't able to find any events in that time for " + target);
+            app.ask("I'm sorry, I wasn't able to find any events in that time for " + target);
         }
         if (type == 'city'){
-            app.tell("I'm sorry, I wasn't able to find any events you would be interested in within " + target + " in that time");
+            app.ask("I'm sorry, I wasn't able to find any events you would be interested in within " + target + " in that time");
         }
 
     }
