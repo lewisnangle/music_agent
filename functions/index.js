@@ -22,36 +22,6 @@ const crypto = require('crypto');
 
 const funcs = require('./functions.js');            //generic functions
 
-var nodemailer = require('nodemailer'); //nodemailer for sending emails
-
-
-//function for sending email
-function sendEmail(email,uid){
-    var transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: 'a.music.agent.app@gmail.com',
-            pass: ''
-        }
-    });
-
-    var mailOptions = {
-        from: 'a.music.agent.app@gmail.com',
-        to: email,
-        subject: 'Music Agent Login',
-        text: 'Here is your spotify login code provided by the music agent: ' + uid + " :)",
-    };
-    transporter.sendMail(mailOptions, function(error, info){
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
-}
-
-
-
 //firebase stuff----------------------------------------------------------------------------------------------------
 
 
@@ -653,7 +623,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
                     app.ask(app.buildRichResponse()
                         .addSimpleResponse('You have selected '+event.lineup)
                         .addSuggestions(
-                            ['Save to my events','Check Availability'])
+                            ['Save to my events','Check Availability','Bars Close By'])
                         .addBasicCard(app.buildBasicCard('You have selected '+event.lineup) // Note the two spaces before '\n' required for a
                         // line break to be rendered in the card
                             .setSubtitle(event.venue.name)

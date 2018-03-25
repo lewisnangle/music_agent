@@ -1,4 +1,3 @@
-const ARTIST = 'artist';
 
 var rp = require('request-promise');
 const functions = require('firebase-functions');
@@ -90,7 +89,10 @@ exports.findArtistEventUserLikes = function (app) {
 
     //get access token of signed in user
     let token = app.getArgument('accesstoken');
+
     let targetCity = app.getArgument('geo-city');
+    let targetCountry = app.getArgument('geo-country');
+
 
     let date = app.getArgument('date-period');
 
@@ -153,10 +155,14 @@ exports.findArtistEventUserLikes = function (app) {
                             for (var key in eventArtistDict) {
 
                                 if (eventArtistDict[key].length !== 0){     //if there are any events
-
+                                    let q = 0
                                     for (let i = 0; i < eventArtistDict[key].length; i++){
-                                        if (eventArtistDict[key][i].venue.city == targetCity){  //if the city the potential event is in is the same as the target city
-                                            targetCityEvents.push(eventArtistDict[key][i]);     //we have found an event the user will be interested in in the relevant city
+                                        if (q >= 29){
+                                            break;
+                                        }
+                                        if ((eventArtistDict[key][i].venue.city == targetCity)||(eventArtistDict[key][i].venue.country == targetCountry)){  //if the city the potential event is in is the same as the target city or country
+                                            q++;
+                                            targetCityEvents.push(eventArtistDict[key][i]);     //we have found an event the user will be interested in in the relevant city or country
                                             artistsWithEvents.push((eventArtistDict[key][i].lineup).join())
                                         }
                                     }
