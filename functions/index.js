@@ -56,7 +56,7 @@ const Spotify = new SpotifyWebApi({
 });
 
 // Scopes to request.
-const OAUTH_SCOPES = ['user-read-email','user-follow-read','user-top-read','playlist-read-private'];
+const OAUTH_SCOPES = ['user-read-email','user-follow-read','user-top-read','playlist-read-private','user-read-recently-played'];
 
 /**
  * Redirects the User to the Spotify authentication consent screen. Also the 'state' cookie is set for later state
@@ -262,7 +262,7 @@ function userTopArtists (token){
 }
 
 
-
+//populate databse with users spotify listening
 function populateDatabaseWithSpotifyListening(token){
     Spotify.setAccessToken(token);
 
@@ -366,7 +366,7 @@ const CHECK_AVAILABILITY = 'check.availability';
 
 
 
-// b. the parameters that are parsed from the make_name intent
+//the parameters in Dialogflow
 const ARTIST_ARGUMENT = 'music-artist';
 const CITY_ARGUMENT = 'geo-city';
 const USERNAME_ARGUMENT = 'users-name';
@@ -386,7 +386,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     console.log('Request headers: ' + JSON.stringify(request.headers));
     console.log('Request body: ' + JSON.stringify(request.body));
 
-
+    //song info request Last FM
     function songInfoFromLastFM(artist,song){
         return rp('http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=bd830d3d033985eb65bca44e084ecf27&artist='+artist+'&track='+song+'&format=json');
     }
@@ -394,6 +394,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     function venueInfoFromTicketMaster(venue){
         return rp('https://app.ticketmaster.com/discovery/v2/venues.json?keyword='+venue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
     }
+
 
     function ticketMasterInfo(artistAndVenue){
         return rp('https://app.ticketmaster.com/discovery/v2/events.json?keyword='+artistAndVenue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
@@ -404,11 +405,12 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         //return rp('https://maps.googleapis.com/maps/api/geocode/json?latlng='+latitude+',' + longitude+'&radius=8000&type=bar&key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8');
     }
 
+    //find bar given venue name
     function findBarGivenVenueName(venueName){
         return rp('https://maps.googleapis.com/maps/api/place/textsearch/json?key=AIzaSyAdgmuDoO-oKulXBA6LnfHWqJ5wTv4thA8&query="bars '+venueName+'"&radius=8000');
     }
 
-
+    //get oauth user
     function getOAuthUser (token) {
         var options = {
             method: 'GET',
@@ -425,7 +427,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 //--------------------------------------------------------------------------------------------------------------------------
 
 
-// c. The functions
+//Function handlers
     function checkAvailability(app){
 
         let token = app.getArgument('accesstoken');
@@ -485,6 +487,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
+    //choose city from events (non visual response)
     function chooseCityFromEventsFoundGHOME(app){
 
         let city = app.getArgument('geo-city');
@@ -538,6 +541,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
 
     }
+
+    //choose artist from events (non - visual )
     function chooseArtistFromEventsFoundGHOME(app){
         let artist = app.getArgument('music-artist');
 
@@ -588,7 +593,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     }
 
 
-
+    //select event (visual)
     function eventOption (app){
         const param = app.getContextArgument('actions_intent_option',
             'OPTION').value;
@@ -647,7 +652,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     }
 
 
-
+    //save event
     function saveEvent_O (app){
 
         let token = app.getArgument('accesstoken');
@@ -686,6 +691,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
+    //find bars near venue by name
     function barsNearVenueByName(app){
 
         const venue = app.getArgument('venue');
@@ -711,7 +717,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     }
 
 
-
+    //find bars near event suggestion
     function barsNearVenue (app) {
 
         let token = app.getArgument('accesstoken');
@@ -753,7 +759,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-
+    //delete a saved event
     function deleteSavedEvent (app){
 
         const param = app.getContextArgument('actions_intent_option',
@@ -848,7 +854,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-
+    //sign in handler
     function signIn(app){
         if(app.getUser().access_token){
             let token = app.getUser().access_token; //account linking token
@@ -888,6 +894,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
                     if (accessToken){
 
+                        //populate database with spotify listening
                         populateDatabaseWithSpotifyListening(accessToken);
 
                         let responseJson = {};      //custom JSON response
@@ -925,7 +932,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         }
     }
 
-
+    //get a user's saved events
     function getSavedEvents (app){
 
         let token = app.getArgument('accesstoken');
@@ -976,7 +983,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-
+    //save an event
     function saveEvent (app) {
         // Get the user's selection
         const param = app.getContextArgument('actions_intent_option',
@@ -1014,7 +1021,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     }
 
 
-
+    //find venue address
     function findVenueAddress (app) {
         let venue = app.getArgument('venue');
 
@@ -1037,12 +1044,8 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-    //import functions from other files
-    const bandsintownFunctions = require('./bandsintownFunctions');
-    const skiddleFunctions = require('./skiddleFunctions');
-    const presentationFunctions = require('./presentationFunctions');
 
-
+    //song info
     function songInfo (app) {
         let artist = app.getArgument('music-artist');
         let song = app.getArgument('song');
@@ -1155,6 +1158,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
+    //spotify logged in
     function spotifyLoggedIn (app) {
 
 
@@ -1213,7 +1217,7 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
 
     }
 
-
+    //user needs to login to spotify
     function spotifyLogin(app){
 
         app.ask(app.buildRichResponse()
@@ -1228,6 +1232,12 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
         );
 
     }
+
+
+    //import functions from other files
+    const bandsintownFunctions = require('./bandsintownFunctions');
+    const skiddleFunctions = require('./skiddleFunctions');
+    const presentationFunctions = require('./presentationFunctions');
 
 
 
@@ -1251,7 +1261,6 @@ exports.EventAgent = functions.https.onRequest((request, response) => {
     actionMap.set(SPOTIFY_ACCESS_ACTION,spotifyAccess);
     actionMap.set(SPOTIFY_LOGGED_IN_ACTION,spotifyLoggedIn);
     actionMap.set(SPOTIFY_LOGIN_ACTION,spotifyLogin);
-
 
 
     app.handleRequest(actionMap);

@@ -1,4 +1,5 @@
 var rp = require('request-promise');
+
 //function to get flickr request
 function flickrRequest (keyword){
     return rp('https://api.flickr.com/services/feeds/photos_public.gne?tags=' + keyword +'&format=json');
@@ -9,6 +10,7 @@ function ticketMasterInfo(artistAndVenue){
     return rp('https://app.ticketmaster.com/discovery/v2/events.json?keyword='+artistAndVenue+'&apikey=4Y1FGSaYP8LjPAP8oPjLSW1ExUZwCxT5');
 }
 
+//present bars found as a list
 exports.presentBarsAsList = function(eventsToPresent,app){
     var list = [];
 
@@ -110,7 +112,7 @@ exports.presentBarsAsList = function(eventsToPresent,app){
 }
 
 
-
+//present events as list (eventsToPresent = list of event objects, target = the artist or location name from the query, type = 'city' or 'artist')
 exports.presentAsList = function(eventsToPresent,app,target,type){
     var list = [];
 
@@ -275,7 +277,7 @@ exports.presentAsList = function(eventsToPresent,app,target,type){
     }
 }
 
-
+//present as carousel function
 exports.presentAsCarousel = function(eventsToPresent,app,target,type){
 
     var carouselList = [];
@@ -402,7 +404,7 @@ exports.presentAsCarousel = function(eventsToPresent,app,target,type){
 }
 
 
-
+//old google Home response
 exports.getGoogleHomeOutput = function(events,cityOrArtist){
     var eventDict = {};             //dictionary of events, where key is the venue name and value is the act/name of the event
     var numOfEvents = events.length;

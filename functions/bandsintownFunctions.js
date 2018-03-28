@@ -79,12 +79,12 @@ function getEventsForArtistWithinDateRange (artistString,dateRange) {
 
 
     //return promise to events for artist within date range
-    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=someappid&date='+startOfDateRange+'%2C'+endOfDateRange);       //send request to Bandsintown API
+    return rp('https://rest.bandsintown.com/artists/'+ artistString + '/events?app_id=concertfinder&date='+startOfDateRange+'%2C'+endOfDateRange);       //send request to Bandsintown API
 }
 
 
 
-
+//find an event for the artist based on their listening preferences and query
 exports.findArtistEventUserLikes = function (app) {
 
     //get access token of signed in user
@@ -184,24 +184,13 @@ exports.findArtistEventUserLikes = function (app) {
                             if (targetCityEvents.length > 0){
 
 
-                                let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT); //check if there is a screen display (ie whether the user is using Google Assistant or Google Home)
-
+                                let hasScreen = app.hasSurfaceCapability(app.SurfaceCapabilities.SCREEN_OUTPUT); //check if there is a visual display           (ie whether the user is using Google Assistant or Google Home)
                                 if (hasScreen){
-                                    presentationFunctions.presentAsList(targetCityEvents,app,targetCity,'city');
-                                    /*
-                                    if (numOfEvents >= 8){
-                                        presentationFunctions.presentAsList(targetCityEvents,app,targetCity,'city');
-                                    } else {
-                                        presentationFunctions.presentAsCarousel(targetCityEvents,app,targetCity,'city');
-                                    }
-                                    */
+                                    presentationFunctions.presentAsList(targetCityEvents,app,targetCity,'city'); //visual display formatted response
                                 } else {
-                                    console.log("EVENT ARTISTS FOUND : " + artistsWithEvents);
-                                    app.ask("I have found you some events that " + artistsWithEvents + " are playing at. Would you be interested in seeing any of them?");
-                                    //app.tell("Here are some events you might like  " + presentationFunctions.getGoogleHomeOutput(targetCityEvents,'city'));           //function to get google home formatted response
-
+                                    app.ask("I have found you some events that " + artistsWithEvents + " are playing at." +
+                                        " Would you be interested in seeing any of them?");                      //Google Home formatted formatted response
                                 }
-
                             } else {
                                 app.ask("Looks like there arent any events coming up you'd be interested in in " + targetCity);
                             }
@@ -233,7 +222,7 @@ exports.findArtistEventUserLikes = function (app) {
 
 
 
-
+//find event for a particular artist
 exports.findArtistEventBandsintownInDateRange = function (app) {
     let token = app.getArgument('accesstoken');
 
